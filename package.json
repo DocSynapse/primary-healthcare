@@ -7,7 +7,7 @@
     "dev:clean": "node -e \"try{require('fs').rmSync('.next/dev/lock')}catch(e){}\" && tsx server.ts",
     "dev:next": "next dev",
     "build": "next build",
-    "start": "set NODE_ENV=production&& tsx server.ts"
+    "start": "NODE_ENV=production tsx server.ts"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
