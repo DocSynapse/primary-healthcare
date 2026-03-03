@@ -19,14 +19,14 @@ export default function RootLayout({
     <html lang="id" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className={GeistSans.className}>
         <ThemeProvider>
-          {/* <CrewAccessGate> */}
+                              <CrewAccessGate>
             <div className="app-shell">
               <AppNav />
               <main className="app-content">
                 {children}
               </main>
             </div>
-          {/* </CrewAccessGate> */}
+                    </CrewAccessGate>
         </ThemeProvider>
       </body>
     </html>
