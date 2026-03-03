@@ -118,8 +118,6 @@ export default function VoicePage() {
     accUserRef.current = "";
     setUserText("");
     setSession("recording");
-    // Sinyal ke Gemini bahwa user mulai bicara
-    socketRef.current?.emit("voice:start_turn");
   }
 
   // PTT: selesai rekam — kirim sinyal end-of-turn ke Gemini
