@@ -9,6 +9,7 @@ import {
   type CrewAccessSession,
   type CrewAccessUser,
 } from "@/lib/crew-access";
+import { CREW_USERS } from "@/lib/server/crew-access-users";
 
 interface CrewAccessCredential extends CrewAccessUser {
   password: string;
@@ -121,7 +122,10 @@ function loadUsersFromFile(): CrewAccessCredential[] {
 function getCrewAccessUsers(): CrewAccessCredential[] {
   const envUsers = loadUsersFromEnv();
   if (envUsers.length > 0) return envUsers;
-  return loadUsersFromFile();
+  const fileUsers = loadUsersFromFile();
+  if (fileUsers.length > 0) return fileUsers;
+  // Fallback: gunakan users yang di-compile ke dalam kode
+  return CREW_USERS;
 }
 
 function getSecret(): string {
