@@ -42,17 +42,13 @@ export default function VoicePage() {
   const [sessionState, setSession] = useState<SessionState>("idle");
   const [error, setError]          = useState("");
   const [liveText, setLiveText]    = useState("");
-  const [userText, setUserText]    = useState("");
-
   const socketRef      = useRef<Socket | null>(null);
   const audioCtxRef    = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const workletRef     = useRef<AudioWorkletNode | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const accTextRef     = useRef("");
-  const accUserRef     = useRef("");
   const nextStartRef   = useRef<{ t: number }>({ t: 0 });
-  const isRecordingRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,11 +70,8 @@ export default function VoicePage() {
     audioCtxRef.current = null;
     nextStartRef.current = { t: 0 };
     accTextRef.current = "";
-    accUserRef.current = "";
-    isRecordingRef.current = false;
     setSession("idle");
     setLiveText("");
-    setUserText("");
   }, []);
 
   async function setupMic(socket: Socket) {
@@ -93,9 +86,7 @@ export default function VoicePage() {
     const worklet = new AudioWorkletNode(ctx, "pcm-processor");
     workletRef.current = worklet;
 
-    // Hanya kirim audio saat tombol PTT ditekan
     worklet.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-      if (!isRecordingRef.current) return;
       const int16 = new Int16Array(e.data);
       const bytes = new Uint8Array(int16.buffer);
       let binary = "";
@@ -106,39 +97,6 @@ export default function VoicePage() {
     const source = ctx.createMediaStreamSource(stream);
     source.connect(worklet);
     worklet.connect(ctx.destination);
-  }
-
-  // PTT: mulai rekam
-  function startRecording() {
-    if (sessionState !== "ready") return;
-    // Interrupt Audrey jika sedang bicara
-    nextStartRef.current = { t: 0 };
-    socketRef.current?.emit("voice:interrupt");
-    isRecordingRef.current = true;
-    accUserRef.current = "";
-    setUserText("");
-    setSession("recording");
-  }
-
-  // PTT: selesai rekam — kirim sinyal end-of-turn ke Gemini
-  function stopRecording() {
-    if (!isRecordingRef.current) return;
-    isRecordingRef.current = false;
-    // Kirim sinyal bahwa user selesai bicara
-    socketRef.current?.emit("voice:end_turn");
-    setSession("speaking");
-
-    // Simpan pesan user jika ada teks
-    if (accUserRef.current.trim()) {
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        role: "user",
-        text: accUserRef.current,
-        time: nowTime(),
-      }]);
-      accUserRef.current = "";
-      setUserText("");
-    }
   }
 
   const connect = useCallback(async () => {
@@ -214,19 +172,6 @@ export default function VoicePage() {
 
   const isConnected = !["idle", "error", "connecting"].includes(sessionState);
 
-  // PTT button color
-  const pttBg = sessionState === "recording"
-    ? "var(--c-critical)"
-    : sessionState === "speaking"
-    ? "var(--c-asesmen)"
-    : "var(--c-asesmen)";
-
-  const pttLabel = sessionState === "recording"
-    ? "🔴 MEREKAM — Lepas untuk kirim"
-    : sessionState === "speaking"
-    ? "🔊 AUDREY BERBICARA..."
-    : "🎙 Tahan untuk bicara";
-
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
 
@@ -234,7 +179,7 @@ export default function VoicePage() {
       <div className="page-header" style={{ maxWidth: 900, width: "100%", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <div className="page-title">Consult Audrey</div>
-          <div className="page-subtitle">Clinical Consultation AI — Push-to-Talk · Sentra Healthcare Solutions</div>
+          <div className="page-subtitle">Clinical Consultation AI — Voice · Sentra Healthcare Solutions</div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           {isConnected && (
@@ -262,7 +207,7 @@ export default function VoicePage() {
         }}>⚠ {error}</div>
       )}
 
-      {/* Connect / PTT Button */}
+      {/* Connect / Status */}
       <div style={{ maxWidth: 900, width: "100%", marginBottom: 28 }}>
         {sessionState === "idle" || sessionState === "error" ? (
           <button onClick={() => void connect()} style={{
@@ -281,51 +226,26 @@ export default function VoicePage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* PTT Button */}
-            <button
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-              onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-              disabled={sessionState === "speaking"}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-                padding: "20px 40px",
-                background: pttBg,
-                border: "none", color: "#fff", cursor: sessionState === "speaking" ? "not-allowed" : "pointer",
-                fontFamily: "var(--font-geist-mono), monospace",
-                fontSize: 12, letterSpacing: "0.12em",
-                userSelect: "none",
-                opacity: sessionState === "speaking" ? 0.7 : 1,
-                transition: "background 0.15s, transform 0.1s",
-                transform: sessionState === "recording" ? "scale(0.97)" : "scale(1)",
-                boxShadow: sessionState === "recording" ? "0 0 24px rgba(220,53,69,0.5)" : "none",
-              }}
-            >
-              {pttLabel}
-            </button>
-
-            {/* Hint */}
-            <div style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.08em" }}>
-              TAHAN tombol saat bicara · LEPAS saat selesai → Audrey langsung memproses
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: "50%",
+                border: `2px solid ${sessionState === "speaking" ? "var(--c-asesmen)" : "#4CAF50"}`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+                boxShadow: sessionState === "speaking" ? "0 0 24px rgba(212,122,87,0.5)" : "0 0 24px rgba(76,175,80,0.4)",
+                animation: "audrey-pulse 1.5s ease-in-out infinite",
+              }}>
+                {sessionState === "speaking" ? "🔊" : "🎙"}
+              </div>
+              <div style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 10, letterSpacing: "0.12em", color: "var(--text-muted)" }}>
+                {sessionState === "speaking" ? "● AUDREY BERBICARA" : "● MENDENGARKAN — Bicara sekarang"}
+              </div>
             </div>
-
-            {/* Live text dari Audrey */}
             {liveText && (
               <div style={{
                 padding: "10px 14px", border: "1px solid var(--c-asesmen)",
                 fontFamily: "var(--font-geist-sans), sans-serif", fontSize: 13,
                 color: "var(--text-main)", fontStyle: "italic", opacity: 0.85,
               }}>{liveText}</div>
-            )}
-
-            {/* Live text dari user */}
-            {userText && (
-              <div style={{
-                padding: "8px 14px", border: "1px solid var(--line-base)",
-                fontFamily: "var(--font-geist-mono), monospace", fontSize: 11,
-                color: "var(--text-muted)",
-              }}>🎙 {userText}</div>
             )}
           </div>
         )}
@@ -348,7 +268,7 @@ export default function VoicePage() {
           }}>
             — BELUM ADA PERCAKAPAN —<br />
             <span style={{ opacity: 0.6, marginTop: 8, display: "block" }}>
-              Hubungkan dulu, lalu tahan tombol dan bicara
+              Hubungkan dulu, lalu bicara langsung dengan Audrey
             </span>
           </div>
         )}

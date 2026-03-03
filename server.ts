@@ -88,7 +88,7 @@ app.prepare().then(() => {
               automaticActivityDetection: {
                 disabled: false,
                 prefixPaddingMs: 20,
-                silenceDurationMs: 200,
+                silenceDurationMs: 500,
               },
             },
             systemInstruction: {
