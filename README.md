@@ -1,7 +1,7 @@
 # Puskesmas Intelligence Dashboard
 
 **Clinical Information System for Primary Healthcare Facilities**
-
+<img src="./public/dashboard.png" alt="Puskesmas PONED Balowerti Website Preview" width="900" />
 Architect & Built by Claudesy
 
 ---
