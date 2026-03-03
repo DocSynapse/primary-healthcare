@@ -84,6 +84,9 @@ app.prepare().then(() => {
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
             },
+            realtimeInputConfig: {
+              automaticActivityDetection: { disabled: true },
+            },
             systemInstruction: {
               parts: [{ text: `Kamu adalah Audrey — Clinical Consultation AI yang diciptakan oleh Sentra Healthcare Solutions untuk mendampingi dokter di Puskesmas Balowerti Kediri.
 
@@ -223,6 +226,29 @@ JANGAN pakai "Hei" atau "Hey" sebagai pembuka. JANGAN terlalu sering sebut nama 
           audio: { data: base64pcm, mimeType: "audio/pcm;rate=16000" },
         });
       } catch { /* ignore */ }
+    });
+
+    // PTT: user mulai bicara → activityStart ke Gemini
+    socket.on("voice:start_turn", () => {
+      if (!geminiSession) return;
+      try {
+        geminiSession.sendRealtimeInput({ activityStart: {} });
+        console.log("[Audrey] voice:start_turn — activityStart sent");
+      } catch { /* ignore */ }
+    });
+
+    // PTT: user selesai bicara → activityEnd ke Gemini → Gemini mulai generate
+    socket.on("voice:end_turn", () => {
+      if (!geminiSession) return;
+      try {
+        geminiSession.sendRealtimeInput({ activityEnd: {} });
+        console.log("[Audrey] voice:end_turn — activityEnd sent");
+      } catch { /* ignore */ }
+    });
+
+    // PTT: interrupt Audrey yang sedang berbicara
+    socket.on("voice:interrupt", () => {
+      console.log("[Audrey] voice:interrupt received");
     });
 
     socket.on("voice:stop", async () => {
