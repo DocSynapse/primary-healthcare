@@ -108,6 +108,10 @@ let cachedDb: DynamicIcdDb | null = null;
 let cachedPaths: Record<IcdVersionKey, string> | null = null;
 let cachedExtensionPath = "";
 
+// Simple LRU cache for ICD lookup results to improve performance
+const LOOKUP_CACHE_LIMIT = 200;
+const lookupCache = new Map<string, IcdLookupResponse>();
+
 function resolveXmlPath(version: IcdVersionKey): string {
   const candidates = DEFAULT_XML_PATHS[version].filter(Boolean);
   for (const candidate of candidates) {
@@ -347,8 +351,22 @@ function findBestMatch(version: VersionCatalog, rawCode: string): ParsedIcdEntry
 }
 
 export function lookupIcdDynamically(query: string): IcdLookupResponse {
-  const db = loadDynamicIcdDb();
   const normalizedQuery = (query || "").trim().toUpperCase();
+
+  // ⚡ Optimization: Return from cache if available
+  // This avoids expensive string processing and filtering on 100k+ records
+  if (lookupCache.has(normalizedQuery)) {
+    const cached = lookupCache.get(normalizedQuery)!;
+
+    // Maintain true LRU: move recently accessed item to the end
+    lookupCache.delete(normalizedQuery);
+    lookupCache.set(normalizedQuery, cached);
+
+    // Ensure the response query field matches the user's input
+    return { ...cached, query };
+  }
+
+  const db = loadDynamicIcdDb();
   const transformed = transformToIcd10_2010(normalizedQuery, { stripSubcode: false });
   const v2010 = db.versions["2010"];
   const v2019 = db.versions["2019"];
@@ -455,7 +473,7 @@ export function lookupIcdDynamically(query: string): IcdLookupResponse {
     category: inferCategoryLabel(entry.code),
   }));
 
-  return {
+  const response: IcdLookupResponse = {
     query,
     normalizedPrimary: transformed.primaryCode,
     rows,
@@ -467,4 +485,13 @@ export function lookupIcdDynamically(query: string): IcdLookupResponse {
     },
     extensionSource: cachedExtensionPath,
   };
+
+  // ⚡ Optimization: Add to cache with LRU eviction
+  if (lookupCache.size >= LOOKUP_CACHE_LIMIT) {
+    const firstKey = lookupCache.keys().next().value;
+    if (firstKey !== undefined) lookupCache.delete(firstKey);
+  }
+  lookupCache.set(normalizedQuery, response);
+
+  return response;
 }
