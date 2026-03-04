@@ -3,7 +3,8 @@ import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { setSocketIO } from "./src/lib/emr/socket-bridge";
-import { GoogleGenAI, Modality } from "@google/genai";
+import { setTeleSocketIO } from "./src/lib/telemedicine/socket-bridge";
+import { GoogleGenAI, Modality, type Session } from "@google/genai";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev, turbopack: false } as Parameters<typeof next>[0]);
@@ -33,11 +34,22 @@ app.prepare().then(() => {
   });
 
   const io = new SocketIOServer(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] },
+    cors: {
+      origin: [
+        "https://puskesmasbalowerti.com",
+        "https://www.puskesmasbalowerti.com",
+        "https://crew.puskesmasbalowerti.com",
+        "https://primary-healthcare-production.up.railway.app",
+        ...(process.env.NODE_ENV !== "production" ? ["http://localhost:3000", "http://localhost:7000"] : []),
+      ],
+      methods: ["GET", "POST"],
+    },
   });
 
   // EMR Auto-Fill Engine: inject io instance untuk progress events
   setSocketIO(io);
+  // Telemedicine: inject io untuk real-time request dari website
+  setTeleSocketIO(io);
 
   io.on("connection", (socket) => {
     // User join: daftarkan ke online list
@@ -66,8 +78,11 @@ app.prepare().then(() => {
     });
 
     // ── Gemini Live Voice Proxy ──────────────────────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let geminiSession: any = null;
+    let geminiSession: Session | null = null;
+    // State flags — shared antara onmessage callback dan PTT handlers
+    let turnCompleteSent = false;
+    let firstChunkSent = false;
+    let turnStartedAt = 0;
 
     socket.on("voice:start", async (payload?: { doctorName?: string }) => {
       const apiKey = process.env.GEMINI_API_KEY;
@@ -85,12 +100,10 @@ app.prepare().then(() => {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
             },
             realtimeInputConfig: {
-              automaticActivityDetection: {
-                disabled: false,
-                prefixPaddingMs: 20,
-                silenceDurationMs: 500,
-              },
+              // PTT mode: VAD dimatikan — dokter sendiri yang kontrol via audioStreamEnd
+              automaticActivityDetection: { disabled: true },
             },
+            inputAudioTranscription: {},
             systemInstruction: {
               parts: [{ text: `Kamu adalah Audrey — Clinical Consultation AI yang diciptakan oleh Sentra Healthcare Solutions untuk mendampingi dokter di Puskesmas Balowerti Kediri.
 
@@ -184,21 +197,36 @@ JANGAN pakai "Hei" atau "Hey" sebagai pembuka. JANGAN terlalu sering sebut nama 
           },
           callbacks: {
             onopen: () => { console.log("[ABBY] Gemini Live connected!"); socket.emit("voice:ready"); },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onmessage: (msg: any) => {
+            onmessage: (msg: { serverContent?: { modelTurn?: { parts?: { inlineData?: { data?: string }; text?: string }[] }; turnComplete?: boolean; interrupted?: boolean; inputTranscription?: { text?: string } } }) => {
               const content = msg?.serverContent;
               if (!content) return;
               const parts = content?.modelTurn?.parts ?? [];
               for (const part of parts) {
                 if (part?.inlineData?.data) {
+                  if (!firstChunkSent) {
+                    firstChunkSent = true;
+                    console.log(`[Audrey] ⚡ first audio chunk — latency: ${Date.now() - turnStartedAt}ms`);
+                  }
+                  turnCompleteSent = false;
                   socket.emit("voice:audio", part.inlineData.data);
                 }
                 if (part?.text) {
                   socket.emit("voice:text", part.text);
                 }
               }
-              if (content?.turnComplete) socket.emit("voice:turn_complete");
-              if (content?.interrupted) socket.emit("voice:interrupted");
+              if (content?.inputTranscription?.text) {
+                socket.emit("voice:user_text", content.inputTranscription.text);
+              }
+              if (content?.turnComplete && !turnCompleteSent) {
+                turnCompleteSent = true;
+                console.log(`[Audrey] turn_complete — total: ${Date.now() - turnStartedAt}ms`);
+                socket.emit("voice:turn_complete");
+              }
+              if (content?.interrupted) {
+                turnCompleteSent = false;
+                firstChunkSent = false;
+                socket.emit("voice:interrupted");
+              }
             },
             onerror: (e: ErrorEvent) => { console.error("[Audrey] Gemini error:", e.message); socket.emit("voice:error", e.message); },
             onclose: (e: { code?: number; reason?: string }) => { console.log("[ABBY] Gemini closed", e?.code, e?.reason); socket.emit("voice:closed"); },
@@ -211,27 +239,52 @@ JANGAN pakai "Hei" atau "Hey" sebagai pembuka. JANGAN terlalu sering sebut nama 
       }
     });
 
-    socket.on("voice:audio_chunk", async (base64pcm: string) => {
+    socket.on("voice:audio_chunk", async (payload: { data: string; mimeType: string } | string) => {
+      if (!geminiSession) return;
+      // Support format lama (string) dan baru (object dengan mimeType)
+      const data   = typeof payload === "string" ? payload : payload.data;
+      const mimeType = typeof payload === "string" ? "audio/pcm;rate=16000" : payload.mimeType;
+      try {
+        await geminiSession.sendRealtimeInput({ audio: { data, mimeType } });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[Audrey] audio_chunk error:", msg);
+        socket.emit("voice:error", `Audio stream error: ${msg}`);
+        geminiSession = null;
+      }
+    });
+
+    // PTT: dokter mulai bicara → reset flags + activityStart
+    socket.on("voice:ptt_start", () => {
       if (!geminiSession) return;
       try {
-        await geminiSession.sendRealtimeInput({
-          audio: { data: base64pcm, mimeType: "audio/pcm;rate=16000" },
-        });
+        // Reset state flags untuk turn baru
+        turnCompleteSent = false;
+        firstChunkSent = false;
+        turnStartedAt = Date.now();
+        geminiSession.sendRealtimeInput({ activityStart: {} });
+        console.log("[Audrey] voice:ptt_start — activityStart sent");
       } catch { /* ignore */ }
     });
 
-    // PTT: user selesai bicara → tutup audio stream → VAD detect silence → Gemini generate
+    // PTT: dokter selesai bicara → activityEnd → Gemini langsung generate
     socket.on("voice:end_turn", () => {
       if (!geminiSession) return;
       try {
-        geminiSession.sendRealtimeInput({ audioStreamEnd: true });
-        console.log("[Audrey] voice:end_turn — audioStreamEnd sent");
+        geminiSession.sendRealtimeInput({ activityEnd: {} });
+        console.log("[Audrey] voice:end_turn — activityEnd sent");
       } catch { /* ignore */ }
     });
 
-    // PTT: interrupt Audrey yang sedang berbicara
+    // Interrupt Audrey yang sedang berbicara → activityEnd
     socket.on("voice:interrupt", () => {
-      console.log("[Audrey] voice:interrupt received");
+      if (!geminiSession) return;
+      try {
+        geminiSession.sendRealtimeInput({ activityEnd: {} });
+        console.log("[Audrey] voice:interrupt — activityEnd sent");
+      } catch (e) {
+        console.error("[Audrey] interrupt error:", e instanceof Error ? e.message : String(e));
+      }
     });
 
     socket.on("voice:stop", async () => {

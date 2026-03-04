@@ -15,7 +15,7 @@ export { runRedFlagChecks, runRedFlagChecksFromContext, checkSepsis, checkACS, c
 export type { RedFlag, RedFlagContext } from './red-flags';
 
 // Symptom Matcher
-export { matchSymptoms, getKBDiseaseCount, clearMatcherCache } from './symptom-matcher';
+export { matchSymptoms, getKBDiseaseCount } from './symptom-matcher';
 export type { MatcherInput, MatchedCandidate } from './symptom-matcher';
 
 // Epidemiology Weights

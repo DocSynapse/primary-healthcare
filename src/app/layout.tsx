@@ -8,6 +8,7 @@ import CrewAccessGate from "@/components/CrewAccessGate";
 export const metadata: Metadata = {
   title: "Sentra — Puskesmas Dashboard",
   description: "Clinical Information System — Sentra Healthcare Solutions",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

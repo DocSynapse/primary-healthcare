@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
 
 import { prisma } from "@/lib/prisma";
-import { getLiveKitConfig } from "@/lib/telemedicine/token";
+import { getLiveKitConfig, isLiveKitConfigured } from "@/lib/telemedicine/token";
 import type { ApiResponse } from "@/types/telemedicine.types";
 
 // ── Simple in-memory rate limiter (per token, per menit) ─────────────────────
@@ -126,13 +126,13 @@ export async function POST(
     );
   }
 
-  const livekitConfig = getLiveKitConfig();
-  if (!livekitConfig) {
+  if (!isLiveKitConfigured()) {
     return NextResponse.json<ApiResponse<null>>(
       { success: false, data: null, message: "Server video tidak tersedia saat ini", timestamp: new Date().toISOString() },
       { status: 503 }
     );
   }
+  const livekitConfig = getLiveKitConfig();
 
   const roomName = appointment.livekitRoomName ?? `pkm-${appointment.id}`;
   const participantIdentity = `patient-${token.slice(0, 8)}`;

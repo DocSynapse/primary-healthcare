@@ -53,7 +53,7 @@ export async function getDoctorSlots(
   });
 
   const bookedTimes = new Set(
-    existingAppointments.map((a) => {
+    existingAppointments.map((a: { scheduledAt: Date; id: string; durationMinutes: number }) => {
       const d = new Date(a.scheduledAt);
       return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     })
@@ -64,7 +64,7 @@ export async function getDoctorSlots(
   return timeSlots.map((slot) => {
     const isBooked = bookedTimes.has(slot.startTime);
     const bookedAppt = isBooked
-      ? existingAppointments.find((a) => {
+      ? existingAppointments.find((a: { scheduledAt: Date; id: string; durationMinutes: number }) => {
           const d = new Date(a.scheduledAt);
           const t = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
           return t === slot.startTime;

@@ -2,7 +2,7 @@ class PCMProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this._buffer = [];
-    this._bufferSize = 1024; // ~64ms di 16kHz
+    this._bufferSize = 512; // ~32ms di 16kHz — lebih responsif untuk VAD
   }
 
   process(inputs) {

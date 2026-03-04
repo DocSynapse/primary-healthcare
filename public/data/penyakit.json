@@ -19,8 +19,481 @@
   },
   "penyakit": [
     {
-      "id": "DIS-001",
-      "kki_no": 1,
+      "id": "DIS-SYNC-001",
+      "nama": "Sinkop dan Collapse (Pingsan)",
+      "nama_en": "Syncope and collapse",
+      "icd10": "R55",
+      "kompetensi": "4A",
+      "body_system": "SISTEM SARAF",
+      "definisi": "Kehilangan kesadaran sementara yang terjadi secara tiba-tiba dan sering kali menyebabkan pingsan/jatuh, biasanya karena penurunan aliran darah ke otak.",
+      "gejala_klinis": [
+        "kehilangan kesadaran",
+        "pingsan",
+        "tiba-tiba",
+        "terjatuh",
+        "pandangan gelap",
+        "lemas",
+        "keringat dingin",
+        "pusing"
+      ],
+      "pemeriksaan_fisik": [
+        "Hipotensi ortostatik",
+        "Nadi lemah atau cepat",
+        "Akral dingin"
+      ],
+      "red_flags": [
+        "Nyeri dada",
+        "Palpitasi",
+        "Sesak napas",
+        "Defisit neurologis fokal"
+      ],
+      "terapi": [
+        {
+          "obat": "Oksigen",
+          "dosis": "2-4 Lpm",
+          "frek": "k/p"
+        },
+        {
+          "obat": "Cairan IV (NS/RL)",
+          "dosis": "Bolus jika hipotensi",
+          "frek": "k/p"
+        }
+      ],
+      "kriteria_rujukan": "Rujuk jika ada tanda-tanda gagal jantung, aritmia, atau onset baru pada usia lanjut.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-I21-001",
+      "nama": "Infark Miokard Akut (Serangan Jantung)",
+      "nama_en": "Acute myocardial infarction",
+      "icd10": "I21",
+      "kompetensi": "3B",
+      "body_system": "SISTEM KARDIOVASKULAR",
+      "definisi": "Kematian otot jantung akibat gangguan aliran darah koroner. Merupakan kegawatan medis utama (Serangan Jantung).",
+      "gejala_klinis": [
+        "Nyeri dada tipikal",
+        "Nyeri dada seperti ditindih beban berat",
+        "Nyeri dada menjalar ke lengan kiri",
+        "Nyeri dada menjalar ke leher atau rahang",
+        "Keringat dingin (diaphoresis)",
+        "Sesak napas mendadak",
+        "Mual dan muntah"
+      ],
+      "pemeriksaan_fisik": [
+        "Pasien tampak gelisah (angst)",
+        "TTV tidak stabil (Hipotensi/Hipertensi)",
+        "Nadi cepat dan lemah"
+      ],
+      "red_flags": [
+        "Nyeri dada > 20 menit tidak hilang dengan istirahat",
+        "Syok kardiogenik",
+        "Aritmia berat",
+        "Penurunan kesadaran"
+      ],
+      "terapi": [
+        {
+          "obat": "Oksigen",
+          "dosis": "2-4 Lpm",
+          "frek": "segera"
+        },
+        {
+          "obat": "Aspirin (kunyah)",
+          "dosis": "160-320 mg",
+          "frek": "single dose"
+        },
+        {
+          "obat": "ISDN (sublingual)",
+          "dosis": "5 mg",
+          "frek": "jika TD sistolik >90"
+        }
+      ],
+      "kriteria_rujukan": "RUJUK SEGERA (Cito) ke RS dengan fasilitas ICCU/Cath-lab setelah pemberian terapi awal.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-C50-001",
+      "nama": "Karsinoma Mammae (Kanker Payudara)",
+      "nama_en": "Malignant neoplasm of breast",
+      "icd10": "C50",
+      "kompetensi": "2",
+      "body_system": "SISTEM REPRODUKSI",
+      "definisi": "Keganasan pada jaringan payudara. Merupakan kanker paling umum pada wanita yang memerlukan deteksi dini dan rujukan segera.",
+      "gejala_klinis": [
+        "Benjolan payudara keras dan tidak mobile",
+        "Perubahan kulit payudara seperti kulit jeruk (Peau d orange)",
+        "Luka pada payudara yang berbau (seperti jeruk busuk)",
+        "Puting susu tertarik ke dalam (retraksi)",
+        "Keluar cairan/darah dari puting",
+        "Benjolan di ketiak"
+      ],
+      "pemeriksaan_fisik": [
+        "Massa keras, batas tidak tegas, terfiksir",
+        "Peau d orange (+)",
+        "Retraksi nipel (+)",
+        "Pembesaran KGB aksila"
+      ],
+      "red_flags": [
+        "Luka terbuka/ulserasi",
+        "Perdarahan dari massa",
+        "Nyeri tulang (tanda metastasis)",
+        "Sesak napas (metastasis paru)"
+      ],
+      "terapi": [
+        { "obat": "Edukasi Sadari", "dosis": "-", "frek": "-" },
+        { "obat": "Analgesik jika nyeri", "dosis": "k/p", "frek": "k/p" }
+      ],
+      "kriteria_rujukan": "RUJUK SEGERA ke Dokter Spesialis Bedah Onkologi untuk biopsi dan staging.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-O00-001",      "nama": "Kehamilan Ektopik Terganggu (KET)",
+      "nama_en": "Ectopic pregnancy, ruptured",
+      "icd10": "O00.1",
+      "kompetensi": "3B",
+      "body_system": "SISTEM REPRODUKSI",
+      "definisi": "Kehamilan di luar rahim yang mengalami pecah/ruptur, menyebabkan perdarahan intra-abdomen hebat. Kegawatan nyawa pada ibu hamil.",
+      "gejala_klinis": [
+        "Nyeri perut bawah mendadak dan sangat hebat",
+        "Riwayat terlambat haid (amenorea)",
+        "Flek darah per vagina",
+        "Nyeri bahu (Kehr sign)",
+        "Pusing hebat hingga pingsan"
+      ],
+      "pemeriksaan_fisik": [
+        "TTV tidak stabil (Syok hipovolemik)",
+        "Nyeri goyang porsio (Slinger pain)",
+        "Kavum douglas menonjol dan nyeri",
+        "Anemis mendadak"
+      ],
+      "red_flags": [
+        "Syok hipovolemik",
+        "Perut tegang dan sangat nyeri",
+        "Penurunan kesadaran"
+      ],
+      "terapi": [
+        { "obat": "Resusitasi Cairan (IV Line 2 jalur)", "dosis": "Grojog/Cepat", "frek": "segera" },
+        { "obat": "Oksigen", "dosis": "4-6 Lpm", "frek": "segera" }
+      ],
+      "kriteria_rujukan": "RUJUK CITO SEGERA ke RS PONEK untuk tindakan operatif (Laparotomi).",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-K40-001",
+      "nama": "Hernia Inkarserata/Strangulata",
+      "nama_en": "Incarcerated hernia",
+      "icd10": "K40.3",
+      "kompetensi": "3B",
+      "body_system": "SISTEM DIGESTIF",
+      "definisi": "Bagian usus yang terjepit di dalam kantong hernia sehingga tidak bisa kembali dan mengganggu aliran darah/isi usus.",
+      "gejala_klinis": [
+        "Benjolan di lipat paha atau skrotum yang tidak bisa masuk kembali",
+        "Nyeri hebat pada benjolan",
+        "Mual dan muntah",
+        "Tidak bisa BAB/kentut (Ileus)"
+      ],
+      "pemeriksaan_fisik": [
+        "Benjolan tegang, nyeri tekan, dan tidak tereduksi",
+        "Warna kulit di atas benjolan kemerahan/gelap",
+        "Bising usus meningkat (metallic sound)"
+      ],
+      "red_flags": [
+        "Tanda peritonitis",
+        "Syok",
+        "Benjolan berubah warna menjadi hitam"
+      ],
+      "terapi": [
+        { "obat": "Puasa (NPO)", "dosis": "-", "frek": "segera" },
+        { "obat": "IV Fluid", "dosis": "Maintenance", "frek": "segera" }
+      ],
+      "kriteria_rujukan": "RUJUK SEGERA ke Spesialis Bedah untuk tindakan operatif darurat.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-I50-001",
+      "nama": "Gagal Jantung Kongestif (CHF)",
+      "nama_en": "Heart failure",
+      "icd10": "I50",
+      "kompetensi": "3B",
+      "body_system": "SISTEM KARDIOVASKULAR",
+      "definisi": "Kondisi jantung tidak mampu memompa darah secara adekuat untuk memenuhi kebutuhan metabolisme tubuh.",
+      "gejala_klinis": [
+        "Sesak napas saat aktivitas (DOE)",
+        "Sesak napas saat berbaring (Orthopnea)",
+        "Sesak mendadak malam hari (PND)",
+        "Bengkak pada kedua tungkai",
+        "Cepat lelah"
+      ],
+      "pemeriksaan_fisik": [
+        "JVP meningkat (nadi leher menonjol)",
+        "Ronkhi basah halus di basal paru",
+        "Edema tungkai (pitting)",
+        "Kardiomegali"
+      ],
+      "red_flags": [
+        "Edema paru akut",
+        "Syok kardiogenik",
+        "Gagal napas"
+      ],
+      "terapi": [
+        { "obat": "Furosemid", "dosis": "20-40 mg", "frek": "IV/Oral" },
+        { "obat": "Spironolakton", "dosis": "25 mg", "frek": "1x1" }
+      ],
+      "kriteria_rujukan": "Rujuk ke Spesialis Jantung jika ada perburukan gejala (ADHF) atau diagnosa baru.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-C18-001",      "nama": "Karsinoma Kolon (Kanker Usus Besar)",
+      "nama_en": "Malignant neoplasm of colon",
+      "icd10": "C18",
+      "kompetensi": "2",
+      "body_system": "SISTEM DIGESTIF",
+      "definisi": "Pertumbuhan sel ganas pada usus besar. Ditandai dengan perubahan pola BAB, obstipasi kronis, atau perdarahan per rektum.",
+      "gejala_klinis": [
+        "Tidak bisa BAB lama",
+        "Tidak bisa kentut (Obstipasi)",
+        "Perut membesar (Distensi)",
+        "Nyeri perut kronis",
+        "Berat badan turun drastis",
+        "Perubahan konsistensi tinja",
+        "BAB berdarah"
+      ],
+      "pemeriksaan_fisik": [
+        "Massa intra-abdomen",
+        "Distensi abdomen",
+        "Metallic sound (pada auskultasi)",
+        "Anemis"
+      ],
+      "red_flags": [
+        "Obstruksi usus total",
+        "Perforasi usus",
+        "Anemia berat",
+        "Massa teraba jelas"
+      ],
+      "terapi": [
+        {
+          "obat": "Dekompresi (NGT)",
+          "dosis": "-",
+          "frek": "segera"
+        },
+        {
+          "obat": "IV Fluid",
+          "dosis": "Maintenance",
+          "frek": "segera"
+        }
+      ],
+      "kriteria_rujukan": "RUJUK SEGERA ke Dokter Spesialis Bedah/Onkologi untuk evaluasi kolonoskopi dan CT-Scan.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-K56-001",
+      "nama": "Ileus Obstruktif",
+      "nama_en": "Obstructive ileus",
+      "icd10": "K56.6",
+      "kompetensi": "2",
+      "body_system": "SISTEM DIGESTIF",
+      "definisi": "Penyumbatan mekanis pada usus yang mencegah jalannya isi usus, termasuk gas dan tinja.",
+      "gejala_klinis": [
+        "Tidak bisa BAB dan kentut",
+        "Muntah hijau (fekal)",
+        "Perut kembung dan tegang",
+        "Nyeri perut kolik"
+      ],
+      "pemeriksaan_fisik": [
+        "Distensi abdomen",
+        "Bising usus meningkat (Metallic sound)",
+        "Nyeri tekan seluruh lapang perut"
+      ],
+      "red_flags": [
+        "Syok",
+        "Peritonitis (perut papan)",
+        "Dehidrasi berat"
+      ],
+      "terapi": [
+        {
+          "obat": "Puasa total (NPO)",
+          "dosis": "-",
+          "frek": "segera"
+        },
+        {
+          "obat": "NGT & Kateter",
+          "dosis": "-",
+          "frek": "segera"
+        }
+      ],
+      "kriteria_rujukan": "RUJUK CITO (Darurat Bedah) ke RS.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-F10-001",      "nama": "Intoksikasi Alkohol Akut",
+      "nama_en": "Acute alcohol intoxication",
+      "icd10": "F10.0",
+      "kompetensi": "3B",
+      "body_system": "KESEHATAN JIWA / ZAT",
+      "definisi": "Gangguan kesadaran dan perilaku akibat konsumsi alkohol dalam jumlah berlebih. Dapat disertai komplikasi metabolik atau trauma.",
+      "gejala_klinis": [
+        "Penurunan kesadaran",
+        "Bau alkohol dari napas",
+        "Bicara pelo",
+        "Mual dan muntah",
+        "Muntah darah (Hematemesis)",
+        "Ataksia (jalan sempoyongan)",
+        "Nyeri perut hebat"
+      ],
+      "pemeriksaan_fisik": [
+        "Penurunan GCS",
+        "Bau alkohol",
+        "Hipotensi (pada dosis toksik)",
+        "Hipoglikemia"
+      ],
+      "red_flags": [
+        "Depresi napas",
+        "Syok",
+        "Kejang",
+        "Aspirasi lambung"
+      ],
+      "terapi": [
+        {
+          "obat": "Oksigenasi",
+          "dosis": "4-6 Lpm",
+          "frek": "segera"
+        },
+        {
+          "obat": "IV Fluid (NS/D5)",
+          "dosis": "Maintenance",
+          "frek": "k/p"
+        }
+      ],
+      "kriteria_rujukan": "Rujuk segera jika ada tanda kegawatan napas, syok, atau perdarahan saluran cerna masif.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-K92-001",
+      "nama": "Hematemesis Melena (Perdarahan SCBA)",
+      "nama_en": "Hematemesis",
+      "icd10": "K92.0",
+      "kompetensi": "3B",
+      "body_system": "SISTEM DIGESTIF",
+      "definisi": "Muntah darah segar atau hitam (coffee ground) yang menunjukkan perdarahan pada saluran cerna bagian atas.",
+      "gejala_klinis": [
+        "Muntah darah",
+        "BAB hitam (Melena)",
+        "Nyeri ulu hati",
+        "Badan sangat lemas",
+        "Keringat dingin",
+        "Riwayat minum jamu/obat nyeri/alkohol"
+      ],
+      "pemeriksaan_fisik": [
+        "Konjungtiva anemis",
+        "TTV tidak stabil (Syok)",
+        "Nyeri tekan epigastrium"
+      ],
+      "red_flags": [
+        "Syok hipovolemik",
+        "Hb turun drastis",
+        "Penurunan kesadaran"
+      ],
+      "terapi": [
+        {
+          "obat": "IV Line 2 jalur",
+          "dosis": "Grojog/Bolus jika syok",
+          "frek": "segera"
+        },
+        {
+          "obat": "Oksigen",
+          "dosis": "2-4 Lpm",
+          "frek": "segera"
+        }
+      ],
+      "kriteria_rujukan": "RUJUK SEGERA ke RS untuk endoskopi dan transfusi darah.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-O14-001",      "nama": "Preeklampsia",
+      "nama_en": "Pre-eclampsia",
+      "icd10": "O14",
+      "kompetensi": "3B",
+      "body_system": "SISTEM REPRODUKSI",
+      "definisi": "Kondisi spesifik pada kehamilan (>20 minggu) yang ditandai dengan hipertensi baru dan seringkali disertai proteinuria atau tanda kerusakan organ.",
+      "gejala_klinis": [
+        "Hipertensi dalam kehamilan",
+        "Nyeri kepala hebat",
+        "Pandangan kabur",
+        "Nyeri ulu hati hebat",
+        "Bengkak pada wajah dan tangan",
+        "Sesak napas"
+      ],
+      "pemeriksaan_fisik": [
+        "Tekanan darah >= 140/90 mmHg",
+        "Proteinuria (pada cek lab)",
+        "Edema tungkai atau umum"
+      ],
+      "red_flags": [
+        "Kejang (Eklampsia)",
+        "TD >= 160/110 mmHg",
+        "Oliguria (BAK sedikit)",
+        "HELLP Syndrome"
+      ],
+      "terapi": [
+        {
+          "obat": "MgSO4 40% (Loading Dose)",
+          "dosis": "4g IV",
+          "frek": "segera (jika PEB)"
+        },
+        {
+          "obat": "Anti-hipertensi (Nifedipin)",
+          "dosis": "10 mg",
+          "frek": "oral"
+        }
+      ],
+      "kriteria_rujukan": "Rujuk ke RS dengan fasilitas VK Kebidanan untuk terminasi kehamilan atau manajemen PEB.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-K35-001",      "nama": "Apendisitis Akut",
+      "nama_en": "Acute appendicitis",
+      "icd10": "K35",
+      "kompetensi": "3B",
+      "body_system": "SISTEM DIGESTIF",
+      "definisi": "Peradangan akut pada apendiks vermiformis (umbai cacing). Merupakan penyebab akut abdomen paling umum yang memerlukan pembedahan.",
+      "gejala_klinis": [
+        "Nyeri perut kanan bawah",
+        "Nyeri berpindah (pusar ke kanan bawah)",
+        "Nyeri di sekitar pusar",
+        "Mual dan muntah",
+        "Anoreksia (hilang nafsu makan)",
+        "Demam",
+        "Nyeri tekan titik McBurney",
+        "Nyeri lepas (rebound tenderness)"
+      ],
+      "pemeriksaan_fisik": [
+        "Nyeri tekan McBurney",
+        "Rovsing sign (+)",
+        "Psoas sign (+)",
+        "Obturator sign (+)"
+      ],
+      "red_flags": [
+        "Defans muskular (perut papan)",
+        "Peritonitis",
+        "Syok sepsis",
+        "Nyeri hebat seluruh lapang perut"
+      ],
+      "terapi": [
+        {
+          "obat": "IV Line (NS/RL)",
+          "dosis": "Maintenance",
+          "frek": "k/p"
+        },
+        {
+          "obat": "Puasa (NPO)",
+          "dosis": "-",
+          "frek": "segera"
+        }
+      ],
+      "kriteria_rujukan": "Rujuk SEGERA ke Dokter Spesialis Bedah (Bedah Cito) untuk apendektomi.",
+      "source": "Clinical Consensus"
+    },
+    {
+      "id": "DIS-001",      "kki_no": 1,
       "nama": "Kejang demam",
       "nama_en": "CONVULSIONS, NOT ELSEWHERE CLA",
       "icd10": "R56",
@@ -1558,51 +2031,60 @@
     {
       "id": "DIS-041",
       "kki_no": 41,
-      "nama": "Tuberkulosis paru tanpa komplikasi",
-      "nama_en": "RESPIRATORY TUBERCOLOSIS, BACT",
+      "nama": "Tuberkulosis Paru",
+      "nama_en": "RESPIRATORY TUBERCOLOSIS",
       "icd10": "A15",
       "kompetensi": "4A",
       "body_system": "SISTEM RESPIRASI",
       "can_refer": false,
-      "definisi": "HIV adalah Human Immunodeficiency Virus (HIV) yang menyerang sel-sel kekebalan tubuh.\nAIDS atau Acquired Immunodefficiency Syndrome adalah kumpulan gejala akibat penurunan\nkekebalan tubuh yang disebabkan oleh infeksi HIV.",
+      "definisi": "Penyakit menular langsung yang disebabkan oleh kuman TB (Mycobacterium tuberculosis). Sebagian besar kuman TB menyerang paru, tetapi dapat juga mengenai organ tubuh lainnya.",
       "gejala_klinis": [
-        "beda antara lain demam atau diare (terus",
-        "keluhan disertai kehilangan berat badan"
+        "Batuk berdahak >= 2 minggu",
+        "Batuk darah",
+        "Sesak napas",
+        "Badan lemas",
+        "Nafsu makan menurun",
+        "Berat badan menurun",
+        "Malaise",
+        "Berkeringat malam hari tanpa kegiatan fisik",
+        "Demam meriang (subfebris) lebih dari satu bulan"
       ],
       "pemeriksaan_fisik": [
-        " penurunan berat badan bersifat sedang yang tidak diketahui penyebabnya (<10%",
-        " penurunan berat badan yang tak diketahui penyebabnya (lebih dari 10% dari"
+        "Demam (subfebris)",
+        "Konjungtiva anemis",
+        "Suara napas bronkial/amforik",
+        "Ronkhi basah kasar di apeks paru"
       ],
       "diagnosis_banding": [
-        "Mumps",
-        "Kista Duktus Tiroglosus",
-        "Kista Dermoid",
-        "Hemangioma"
+        "Pneumonia",
+        "Bronkitis kronis",
+        "Bronkiektasis",
+        "Karsinoma paru",
+        "Asma"
       ],
       "komplikasi": [
-        "ICPC II: B90 HIV-infection/AIDS",
-        "ICD X: Z21 Asymptomatic human immunodeficiency virus (HIV) infection status",
-        "sel kekebalan tubuh.",
-        "Hasil Anamnesis(Subjective)",
-        "beda antara lain demam atau diare (terus",
-        "Keluhan disertai kehilangan berat badan",
-        "% dari BB dasar. Keluhan lain bergantung dari penyakit yang menyertainya,",
-        " Infeksi:",
-        "Virus, seperti herpes zoster berulang atau lebih dari satu dermatom, herpes genital",
-        "Gangguan napas, seperti tuberculosis, batuk >1 bulan, sesak napas, pneumonia berulang,"
+        "Batuk darah masif",
+        "Pneumotoraks",
+        "Laringitis TB",
+        "Efusi pleura",
+        "Penyebaran ke organ lain (Miliar)"
       ],
       "red_flags": [
-        "ICPC II: B90 HIV-infection/AIDS",
-        "ICD X: Z21 Asymptomatic human immunodeficiency virus (HIV) infection status",
-        "sel kekebalan tubuh.",
-        "Hasil Anamnesis(Subjective)",
-        "beda antara lain demam atau diare (terus"
+        "Hemoptisis masif (batuk darah banyak)",
+        "Sesak napas berat",
+        "Pneumotoraks",
+        "TB dengan HIV/AIDS"
       ],
-      "terapi": [],
-      "kriteria_rujukan": " Rujukan horizontal bila fasilitas untuk pemeriksaan HIV tidak dapat dilakukan di layanan\nprimer.\n Rujukan vertikal bila terdapat pasien HIV/AIDS dengan komplikasi.",
-      "source": "PPK IDI 2013 + 144 Diagnosis KKI"
-    },
-    {
+      "terapi": [
+        {
+          "obat": "OAT Kategori 1 (2RHZE/4R3H3)",
+          "dosis": "Sesuai berat badan",
+          "frek": "Tiap hari/3x seminggu"
+        }
+      ],
+      "kriteria_rujukan": "Rujuk jika: TB dengan komplikasi, TB resistan obat (MDR-TB), atau TB dengan penyakit penyerta berat.",
+      "source": "PNPK Tata Laksana Tuberkulosis 2021"
+    },    {
       "id": "DIS-042",
       "kki_no": 42,
       "nama": "Hipertensi esensial",
@@ -3277,67 +3759,66 @@
     {
       "id": "DIS-092",
       "kki_no": 92,
-      "nama": "Demam dengue, DHF",
+      "nama": "Dengue Hemorrhagic Fever (DHF)",
       "nama_en": "DENGUE HAEMORRHAGIC FEVER",
       "icd10": "A91",
       "kompetensi": "4A",
       "body_system": "HEMATOLOGI DAN IMUNOLOGI",
       "can_refer": false,
-      "definisi": "Demam Dengue dan Demam Berdarah Dengue adalah penyakit infeksi yang disebabkan oleh\nvirus Dengue. Virus Dengue memiliki 4 jenis serotype: DEN-1, DEN-2, DEN-3, DEN-4.\nInfeksi salah satu serotype akan menimbulkan antibody terhadap serotype yang bersangkutan,\nnamun tidak untuk serotype lainnya, sehingga seseorang dapat terinfeksi demam Dengue 4\nkali selama hidupnya. Indonesia merupakan Negara yang endemis untuk Demam Dengue\nmaupun Demam Berdarah Dengue.",
+      "definisi": "Infeksi virus dengue yang ditandai dengan demam tinggi mendadak, fenomena perdarahan, trombositopenia, dan bukti kebocoran plasma (peningkatan hematokrit, efusi pleura, atau asites).",
       "gejala_klinis": [
-        "demam tinggi mendadak terusmenerus selama 27 hari",
-        "nyeri kepala hebat",
-        "nyeri retroorbital (nyeri di belakang bola mata)",
-        "mialgia (nyeri otot seluruh badan)",
-        "artralgia (nyeri sendi)",
-        "mual dan muntah",
-        "nyeri perut",
-        "ruam kulit (skin rash) makulopapular",
-        "perdarahan: petekie, epistaksis, gusi berdarah",
-        "lemas dan lesu",
-        "nafsu makan menurun",
-        "tanda bahaya: nyeri perut hebat, muntah persisten, perdarahan mukosa, gelisah"
+        "Demam tinggi mendadak (2-7 hari)",
+        "Nyeri kepala dan nyeri retroorbital",
+        "Mialgia dan artralgia",
+        "Bintik merah di kulit (Petechiae)",
+        "Gusi berdarah atau mimisan (Epistaksis)",
+        "Nyeri perut hebat",
+        "Muntah terus-menerus",
+        "Badan lemas atau gelisah",
+        "Tangan dan kaki dingin (Akral dingin)"
       ],
-      "pemeriksaan_fisik": [],
+      "pemeriksaan_fisik": [
+        "Uji Rumple Leed positif",
+        "Hepatomegali (pembesaran hati)",
+        "Tanda-tanda syok (nadi cepat dan lemah)",
+        "Petechiae, purpura, atau ekimosis"
+      ],
       "diagnosis_banding": [
-        "Demam tifoid",
-        "Chikungunya",
+        "Demam Dengue (DD)",
+        "Demam Tifoid",
         "Malaria",
-        "Leptospirosis",
-        "Infeksi virus lain (campak, influenza)"
+        "Chikungunya",
+        "Leptospirosis"
       ],
       "komplikasi": [
         "Dengue Shock Syndrome (DSS)",
-        "Perdarahan masif (hematemesis, melena)",
-        "Ensefalopati dengue",
-        "Gagal organ multipel",
-        "Disseminated Intravascular Coagulation (DIC)"
+        "Perdarahan saluran cerna",
+        "Ensefalopati dengue"
       ],
       "red_flags": [
-        "Nyeri perut hebat dan terus-menerus",
-        "Muntah persisten",
-        "Perdarahan masif (hematemesis, melena)",
-        "Penurunan kesadaran atau gelisah",
-        "Tanda-tanda syok: akral dingin, nadi lemah, tekanan darah turun",
-        "Hepatomegali >2 cm",
-        "Trombositopenia berat (<50.000)"
+        "Nyeri perut hebat",
+        "Muntah persisten (terus-menerus)",
+        "Akumulasi cairan (asites/efusi pleura)",
+        "Perdarahan mukosa",
+        "Letargi atau gelisah",
+        "Pembesaran hati > 2 cm",
+        "Peningkatan hematokrit bersamaan dengan penurunan cepat trombosit"
       ],
       "terapi": [
         {
-          "obat": "Parasetamol",
-          "dosis": "10-15 mg/kgBB/kali",
-          "frek": "Tiap 4-6 jam bila demam (maks 4x sehari)"
+          "obat": "Cairan Isotonik (RL/NS)",
+          "dosis": "Sesuai protokol WHO/Kemenkes",
+          "frek": "Tetesan mikro/makro"
         },
         {
-          "obat": "Oralit",
-          "dosis": "Sesuai derajat dehidrasi",
-          "frek": "Sering sedikit-sedikit"
+          "obat": "Parasetamol",
+          "dosis": "10-15 mg/kgBB",
+          "frek": "k/p demam"
         }
       ],
-      "kriteria_rujukan": " Terjadi perdarahan masif (hematemesis, melena).\n Dengan pemberian cairan kristaloid sampai dosis 15 ml/kg/ jam kondisi belum membaik.\n Terjadi komplikasi atau keadaan klinis yang tidak lazim, seperti kejang, penurunan\nkesadaran, dan lainnya.",
-      "source": "PPK IDI 2013 + 144 Diagnosis KKI"
-    },
-    {
+      "kriteria_rujukan": "Rujuk ke RS jika terdapat tanda bahaya (warning signs), penurunan kesadaran, perdarahan masif, atau syok (DSS).",
+      "source": "PNPK Tata Laksana Dengue Kemenkes 2021"
+    },    {
       "id": "DIS-093",
       "kki_no": 93,
       "nama": "Malaria",
@@ -4405,21 +4886,32 @@
     {
       "id": "DIS-124",
       "kki_no": 124,
-      "nama": "Filariasis",
+      "nama": "Filariasis (Kaki Gajah)",
       "nama_en": "FILARIASIS",
       "icd10": "B74",
       "kompetensi": "4A",
       "body_system": "SISTEM INTEGUMEN",
       "can_refer": false,
-      "definisi": "Filariasis (Penyakit Kaki Gajah) adalah penyakit menular yang disebabkan oleh cacing\nFilaria yang ditularkan oleh berbagai jenis nyamuk. Penyakit ini bersifat menahun (kronis)\ndan bila tidak mendapatkan pengobatan dapat menimbulkan cacat menetap berupa\npembesaran kaki,lengan dan alat kelamin baik perempuan maupun laki-laki.\nWHO sudah menetapkan Kesepakatan Global untuk mengeliminasi filariasis pada tahun\n2020 (The Global Goal of Elimination of LymphaticFilariasis as a Public Health problem by\nThe Year 2020). Program eliminasi dilaksanakan melalui pengobatan massal dengan DEC\ndan Albendazol setahun sekali selama 5 tahun di lokasi yangendemis serta perawatan kasus\nklinis baik yang akut maupun kronis untuk mencegah kecacatandan mengurangi\npenderitaannya.\nIndonesia melaksanakan eliminasi penyakit kaki gajah secara bertahap yang telah dimulai\nsejak tahun 2002 di 5 kabupaten. Perluasan wilayah akan dilaksanakan setiap tahun.\nPenyakit kaki gajah disebabkan oleh tiga spesies cacing filaria yai",
+      "definisi": "Filariasis adalah penyakit menular menahun yang disebabkan oleh cacing filaria dan ditularkan melalui nyamuk.",
       "gejala_klinis": [
-        "hari. demam dapat hilang bila istirahat dantimbul lagi",
-        " pembengkakan kelenjar getah bening (tanpa ada luka) didaerah lipatan"
+        "kaki bengkak sebelah",
+        "pembengkakan kaki",
+        "pembengkakan lengan",
+        "pembengkakan alat kelamin",
+        "demam berulang",
+        "nyeri pada pembengkakan",
+        "kaki gajah",
+        "elephantiasis"
       ],
-      "pemeriksaan_fisik": [],
+      "pemeriksaan_fisik": [
+        "Limfedema",
+        "Hidrokel",
+        "Chyluria"
+      ],
       "diagnosis_banding": [
-        "Infeksi bakteri, tromboflebitis atau trauma dapat mengacaukan adenolimfadenitis",
-        "Tuberkulosis, lepra, sarkoidosis dan penyakit sistemik granulomatous lainnya."
+        "Limfedema karena gagal jantung",
+        "DVT",
+        "Selulitis"
       ],
       "komplikasi": [],
       "red_flags": [],
@@ -4494,19 +4986,24 @@
       "kompetensi": "4A",
       "body_system": "SISTEM INTEGUMEN",
       "can_refer": false,
-      "definisi": "Infeksi kulit oleh tungau Sarcoptes scabiei",
+      "definisi": "Penyakit kulit menular yang disebabkan oleh infestasi dan sensitisasi terhadap tungau Sarcoptes scabiei var. hominis.",
       "gejala_klinis": [
-        "gatal malam hari"
+        "Gatal malam hari (pruritus nokturna)",
+        "Gatal pada sela jari",
+        "Gatal pada pergelangan tangan",
+        "Gatal di area genitalia atau bokong",
+        "Riwayat anggota keluarga/asrama ikut gatal (menular)"
       ],
       "pemeriksaan_fisik": [
-        "wordpress.com/2009/12/08/skabieskulitgatalbikinsebal/"
+        "Terowongan (kunikulus) warna putih keabu-abuan",
+        "Papul, vesikel, atau ekskoriasi di ujung terowongan",
+        "Lesi di sela jari, pergelangan tangan volard, ketiak, umbilikus"
       ],
       "diagnosis_banding": [
-        "Diagnosis bandingnya adalah:",
-        "Pioderma",
-        "Impetigo",
-        "Dermatitis",
-        "Pedikulosis korporis"
+        "Prurigo",
+        "Pedikulosis korporis",
+        "Dermatitis atopik",
+        "Dermatitis kontak"
       ],
       "komplikasi": [
         "aureus sering terjadi, terutama pada anak. Komplikasi"
@@ -4600,20 +5097,26 @@
       "kompetensi": "4A",
       "body_system": "SISTEM INTEGUMEN",
       "can_refer": false,
-      "definisi": "Dermatitis Atopik (DA) adalah peradangan kulit berulang dan kronis dengan disertai gatal.\nPada umumnya terjadi selama masa bayi dan anak-anak dan sering berhubungan dengan\npeningkatan kadar IgE dalam serum serta riwayat atopi pada keluarga atau penderita.\nSinonim dari penyakit ini adalah eczema atopik, eczema konstitusional, eczema fleksural,\nneurodermatitis diseminata, prurigo Besnier",
-      "gejala_klinis": [],
-      "pemeriksaan_fisik": [],
+      "definisi": "Peradangan kulit berulang dan kronis yang sangat gatal (pruritus). Sering terjadi pada bayi dan anak-anak, sangat berhubungan dengan riwayat atopi (asma, rhinitis alergi) pada pasien atau keluarga.",
+      "gejala_klinis": [
+        "Gatal hebat (pruritus)",
+        "Kulit kering (xerosis)",
+        "Ruam merah kronis dan berulang",
+        "Riwayat alergi atau asma dalam keluarga",
+        "Ruam pada lipatan tubuh (leher, siku, lutut pada anak/dewasa)",
+        "Ruam pada pipi (pada bayi)"
+      ],
+      "pemeriksaan_fisik": [
+        "Plak eritematosa",
+        "Ekskoriasi (bekas garukan)",
+        "Likenifikasi (penebalan kulit)",
+        "Dermatitis fleksural"
+      ],
       "diagnosis_banding": [
-        "Dermatitis seboroik (terutama pada bayi),",
-        "Dermatitis kontak,",
-        "Dermatitis numularis,",
-        "Skabies,",
-        "Iktiosis,",
-        "Psoriasis (terutama di daerah palmoplantar),",
-        "Sindrom Sezary,",
-        "Dermatitis herpetiformis.",
-        "Sindrom imunodefisiensi (misalnya sindrom Wiskott-Aldrich),",
-        "Sindrom hiper IgE."
+        "Dermatitis seboroik",
+        "Dermatitis kontak",
+        "Skabies",
+        "Dermatitis numularis"
       ],
       "komplikasi": [
         "Infeksi sekunder",

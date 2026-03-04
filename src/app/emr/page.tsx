@@ -80,6 +80,10 @@ export default function EMRPage() {
 
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
 
+  // ── Patient Context (Critical for CDSS V3.4) ──────────────────────────────
+  const [patientAge, setPatientAge] = useState<number>(35);
+  const [patientGender, setPatientGender] = useState<"L" | "P">("L");
+
   const [labOpen, setLabOpen] = useState(false);
   const [labSelected, setLabSelected] = useState([false, false, false]);
   const [examOpen, setExamOpen] = useState(false);
@@ -105,6 +109,7 @@ export default function EMRPage() {
   const [keluhanUtama, setKeluhanUtama] = useState("");
   const [keluhanTambahan, setKeluhanTambahan] = useState("");
   const [keluhanAsli, setKeluhanAsli] = useState(""); // teks asli sebelum SenAuto transform
+  const [anamnesaEntities, setAnamnesaEntities] = useState({ utama: "", onset: "", faktor: "" });
 
   // Editable exam
   const [exam, setExam] = useState({
@@ -146,9 +151,9 @@ export default function EMRPage() {
     setDraftBorderColor("var(--c-asesmen)");
     setHeaderText("SENTRA // RM-BARU // SENAUTO ENGINE: SYNTHESIZING...");
     setHeaderColor("var(--c-asesmen)");
-    setWords(narrative.split(" "));
+    setWords(narrative.split(/\s+/));
 
-    const totalTime = (narrative.split(" ").length * 80) + 800;
+    const totalTime = (narrative.split(/\s+/).length * 80) + 800;
 
     setTimeout(() => {
       setHeaderText("SENTRA // RM-BARU // EMR RETRIEVAL ACTIVE");
@@ -167,8 +172,13 @@ export default function EMRPage() {
       setTimeout(() => {
         setShowEmrLoader(false);
         setHistoryLoaded(true);
-        setHeaderText("SENTRA // RM-BARU // IN PROGRESS — MENUNGGU INPUT DOKTER");
+        setHeaderText("SENTRA // RM-BARU // Synthesia Engine: READY");
         setAnamnesaVisible([true, true, true]);
+        setAnamnesaEntities({
+          utama: result.entities?.keluhan_utama || "",
+          onset: result.entities?.onset_durasi || "",
+          faktor: result.entities?.faktor_pemberatan || "",
+        });
         setIsTyping(false);
         setWords([]);
       }, 1500);
@@ -214,7 +224,7 @@ export default function EMRPage() {
       riwayat.rpk ? `RPK: ${riwayat.rpk}` : "",
     ].filter(Boolean).join(". ") || undefined;
 
-    try {
+          try {
       const res = await fetch("/api/cdss/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -233,6 +243,8 @@ export default function EMRPage() {
           },
           chronic_diseases: rpdSelected.size > 0 ? Array.from(rpdSelected) : undefined,
           allergies: alergiSelected.size > 0 ? Array.from(alergiSelected) : undefined,
+          age: patientAge,
+          gender: patientGender,
         }),
       });
       const data = await res.json() as CDSSResult;
@@ -247,6 +259,14 @@ export default function EMRPage() {
   // ── TTV Inference — Gate 1: pakai Assist inferVitals + BP_THRESHOLDS ────────
 
   function inferTTV(overrideKeluhan?: string) {
+    // ── Read Warning: Clinical Guardrail ──────────────────────────────────
+    const confirmInference = window.confirm(
+      "PERINGATAN KLINIS: Fitur Auto-TTV akan melakukan inferensi data vital berdasarkan keluhan. \\n\\n" +
+      "Data ini bersifat SARAN dan HARUS divalidasi ulang dengan pemeriksaan fisik nyata. \\n" +
+      "Lanjutkan sinkronisasi narasi klinis?"
+    );
+    if (!confirmInference) return;
+
     const rpdStr = Array.from(rpdSelected).join(" ").toLowerCase();
     const baseComplaint = overrideKeluhan ?? (keluhanRef.current.utama + " " + keluhanRef.current.tambahan);
     const complaint = (baseComplaint + " " + rpdStr).toLowerCase();
@@ -272,7 +292,7 @@ export default function EMRPage() {
     // GCS
     const gcs = (complaint.includes("tidak sadar") || complaint.includes("penurunan kesadaran")) ? 14 : 15;
 
-    setVitals({
+    const newVitals = {
       gcs:   String(gcs),
       td:    `${sbp}/${dbp}`,
       nadi:  String(inferred.values.pulse  ?? getRandomNormal(NORMAL_RANGES.pulse.min,  NORMAL_RANGES.pulse.max)),
@@ -280,7 +300,12 @@ export default function EMRPage() {
       suhu:  String(inferred.values.temp   ?? getRandomNormal(NORMAL_RANGES.temp.min,   NORMAL_RANGES.temp.max, 1)),
       spo2:  String(spo2),
       map:   String(Math.round((sbp + 2 * dbp) / 3)),
-    });
+    };
+    
+    setVitals(newVitals);
+
+    setHeaderText("SENTRA // RM-BARU // Synthesia Engine: TTV INFERRED — VALIDATION REQUIRED");
+    setHeaderColor("var(--c-asesmen)");
   }
 
   // ── Gate 2/3/4 Alert Engine — sama persis pola Assist TTVInferenceUI.tsx ──
@@ -470,11 +495,13 @@ export default function EMRPage() {
             fontSize: 13,
             color: "var(--c-asesmen)",
             border: "1px solid var(--c-asesmen)",
-            padding: "1px 6px",
+            padding: "1px 10px",
             borderRadius: 2,
             animation: "smoothBlink 2s infinite",
+            background: "rgba(212,122,87,0.05)",
+            letterSpacing: "0.05em"
           }}>
-            IN PROGRESS — {progress}%
+            ✧ Synthesia Engine
           </span>
         </div>
 
@@ -482,13 +509,46 @@ export default function EMRPage() {
         <div className="clinical-stream">
           <div className="stream-line" />
 
+          {/* Patient Profile Context Bar */}
+          <div style={{ display: "flex", gap: 24, marginBottom: 32, padding: "12px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--line-base)", borderRadius: 4, alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-geist-mono)" }}>UMUR:</span>
+              <input 
+                type="number" 
+                value={patientAge} 
+                onChange={(e) => setPatientAge(parseInt(e.target.value) || 0)}
+                style={{ background: "transparent", border: "none", borderBottom: "1px dashed var(--line-base)", color: "var(--text-main)", width: "40px", fontSize: 14, outline: "none", textAlign: "center" }}
+              />
+              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>thn</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-geist-mono)" }}>GENDER:</span>
+              <div style={{ display: "flex", gap: 4 }}>
+                {(["L", "P"] as const).map(g => (
+                  <button 
+                    key={g} 
+                    onClick={() => setPatientGender(g)}
+                    style={{ 
+                      background: patientGender === g ? "var(--c-asesmen)" : "transparent",
+                      border: `1px solid ${patientGender === g ? "var(--c-asesmen)" : "var(--line-base)"}`,
+                      color: patientGender === g ? "white" : "var(--text-muted)",
+                      fontSize: 10, padding: "2px 8px", borderRadius: 2, cursor: "pointer"
+                    }}
+                  >
+                    {g === "L" ? "Laki-laki" : "Perempuan"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* 01. Anamnesa */}
           <div className="stream-section">
             <div className="section-title">01. Anamnesa</div>
             <div className="blueprint-wrapper">
               <span className="data-label">Keluhan Utama</span>
-              <div className="patient-narrative" style={{ marginBottom: 24 }}>
-                <span className="input-draft" style={{ borderBottomColor: draftBorderColor }}>
+              <div className="patient-narrative" style={{ marginBottom: 24, position: "relative" }}>
+                <span className="input-draft" style={{ borderBottomColor: draftBorderColor, display: "block" }}>
                   {words.length > 0 ? (
                     words.map((word, i) => (
                       <span key={i} className="blur-word" style={{ animationDelay: `${i * 80}ms` }}>{word}{" "}</span>
@@ -529,17 +589,48 @@ export default function EMRPage() {
                       }}
                     />
                   )}
-                  {ghostVisible && keluhanUtama.trim() && (
-                    <span className="senauto-ghost" onClick={handleSenAutoClick}>
-                      ✧ Synthesize with SenAuto
-                    </span>
-                  )}
                 </span>
-                <span style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: 15 }}>
-                  {keluhanUtama ? "— durasi belum diisi" : "..."}
-                </span>
+                
+                {/* Floating SenAuto Trigger */}
+                {keluhanUtama.trim() && !isTyping && (
+                  <div 
+                    onClick={handleSenAutoClick} 
+                    style={{ 
+                      position: "absolute",
+                      right: 0,
+                      bottom: -18,
+                      background: "rgba(212,122,87,0.08)", 
+                      border: "1px solid var(--c-asesmen)", 
+                      color: "var(--c-asesmen)", 
+                      fontFamily: "var(--font-geist-mono), monospace", 
+                      fontSize: 9, 
+                      padding: "2px 10px", 
+                      borderRadius: 4, 
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      zIndex: 10,
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--c-asesmen)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(212,122,87,0.08)";
+                      e.currentTarget.style.color = "var(--c-asesmen)";
+                    }}
+                  >
+                    ✧ AUTO SENTRA
+                  </div>
+                )}
               </div>
-              <span className="data-label">Keluhan Tambahan</span>
+              <span style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: 13, marginTop: 4, display: "block" }}>
+                {keluhanUtama ? "— durasi belum diidentifikasi" : "..."}
+              </span>
+              
+              <span className="data-label" style={{ display: "block", marginTop: 24 }}>Keluhan Tambahan</span>
               <div className="patient-narrative">
                 <input
                   type="text"
@@ -932,22 +1023,25 @@ export default function EMRPage() {
         {/* ─── Right: Extraction Sidebar ─── */}
         <div className="entity-sidebar">
           <div className="extraction-block">
-            <div className="extraction-header">
-              <span>AI ENTITY: ANAMNESA</span>
-              <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 13, color: "var(--text-muted)", animation: "smoothBlink 2s infinite" }}>
-                MENUNGGU...
+            <div className="extraction-header" style={{ color: "var(--c-asesmen)" }}>
+              <span>Audrey Synthesia Algorithm</span>
+              <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11, color: "var(--c-asesmen)", animation: "smoothBlink 2s infinite" }}>
+                LISTENING...
               </span>
             </div>
             <div className="extracted-list">
               {[
-                { label: "Keluhan Utama", meta: "PENDING" },
-                { label: "Onset / Durasi", meta: "PENDING" },
-                { label: "Faktor Pemberatan", meta: "PENDING" },
+                { label: "Keluhan Utama", meta: anamnesaEntities.utama || "PENDING" },
+                { label: "Onset / Durasi", meta: anamnesaEntities.onset || "PENDING" },
+                { label: "Faktor Pemberatan", meta: anamnesaEntities.faktor || "PENDING" },
               ].map((item, i) => (
                 <div key={i} className={`entity-tag-item${anamnesaVisible[i] ? " visible" : ""}`}
                   style={anamnesaVisible[i] ? {} : { opacity: 0.2, transform: "none" }}>
                   <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>{item.label}</span>
-                  <span className="tag-meta" style={{ color: "var(--text-muted)", opacity: 0.5 }}>{item.meta}</span>
+                  <span className="tag-meta" style={{ 
+                    color: item.meta !== "PENDING" ? "var(--c-asesmen)" : "var(--text-muted)",
+                    opacity: item.meta !== "PENDING" ? 1 : 0.5 
+                  }}>{item.meta}</span>
                 </div>
               ))}
             </div>

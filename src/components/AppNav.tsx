@@ -9,10 +9,10 @@ import { useTheme } from "./ThemeProvider";
 const NAV_ITEMS = [
   { href: "/",              label: "Profil User"    },
   { href: "/emr",           label: "EMR Klinis"     },
+  { href: "/voice",         label: "Consult Audrey" },
   { href: "/icdx",          label: "ICD-X Finder"   },
   { href: "/telemedicine",  label: "Telemedicine"   },
   { href: "/report",        label: "Report"         },
-  { href: "/voice",         label: "Consult Audrey" },
   { href: "/acars",         label: "ACARS"          },
 ];
 

@@ -3,7 +3,6 @@
 // ============================================================
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 
 interface AuditLogInput {
   appointmentId: string;
@@ -24,7 +23,7 @@ export async function createAuditLog({
         appointmentId,
         userId,
         action,
-        metadata: (metadata ?? {}) as Prisma.InputJsonValue,
+        metadata: (metadata ?? {}) as object,
       },
     });
   } catch (error) {

@@ -223,6 +223,7 @@ export async function runDiagnosisEngine(
       keluhanTambahan: anonymizedContext.keluhan_tambahan,
       usia: anonymizedContext.usia_tahun,
       jenisKelamin: anonymizedContext.jenis_kelamin,
+      vitalSigns: anonymizedContext.vital_signs, // INTEGRATED V2 Vitals
     }, 10),
     getLocalEpidemiologyContext(15)
   ]);
@@ -298,7 +299,7 @@ export async function runDiagnosisEngine(
       session_id: sessionId,
       suggestions: filteredSuggestions.map(s => ({ icd10_code: s.icd10_code, confidence: s.confidence })),
       red_flag_count: redFlags.length,
-      model_version: modelVersion,
+      model_version: modelVersion || 'IDE-V2',
       latency_ms: processingTime,
       validation_status: validationResult.valid ? 'PASS' : validationResult.layer_passed >= 3 ? 'WARN' : 'FAIL',
     }).catch(console.error);
@@ -313,7 +314,7 @@ export async function runDiagnosisEngine(
     alerts,
     processing_time_ms: processingTime,
     source: matcherSource,
-    model_version: modelVersion,
+    model_version: modelVersion || 'IDE-V2-SEMANTIC',
     validation_summary: {
       total_raw: rawSuggestions.length,
       total_validated: filteredSuggestions.length,
@@ -330,22 +331,22 @@ export async function getCDSSEngineStatus(): Promise<CDSSEngineStatus> {
     const { auditLogger } = await import('./audit-logger');
     const kbCount = await getKBDiseaseCount();
     const auditCount = await auditLogger.getEntryCount();
-    return { ready: kbCount > 0, kb_disease_count: kbCount, model: 'IDE-V1', audit_entries: auditCount };
+    return { ready: kbCount > 0, kb_disease_count: kbCount, model: 'IDE-V2-SEMANTIC', audit_entries: auditCount };
   } catch (error) {
-    return { ready: false, kb_disease_count: 0, model: 'IDE-V1', audit_entries: 0, last_error: error instanceof Error ? error.message : 'Unknown error' };
+    return { ready: false, kb_disease_count: 0, model: 'IDE-V2-SEMANTIC', audit_entries: 0, last_error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
 export async function initCDSSEngine(): Promise<boolean> {
   try {
-    console.log('[IDE-V1] Initializing Iskandar Diagnosis Engine...');
+    console.log('[IDE-V2] Initializing Iskandar Semantic Engine V2...');
     await dataProvider.initialize();
     const kbCount = await getKBDiseaseCount();
     await getEpidemiologyMeta();
-    console.log(`[IDE-V1] Ready. KB: ${kbCount} diseases. Model: IDE-V1-GEMINI (Gemini 2.0 Flash)`);
+    console.log(`[IDE-V2] Ready. KB: ${kbCount} diseases. Model: IDE-V2-SEMANTIC (Gemini 2.0 Flash)`);
     return kbCount > 0;
   } catch (error) {
-    console.error('[IDE-V1] Initialization failed:', error);
+    console.error('[IDE-V2] Initialization failed:', error);
     return false;
   }
 }

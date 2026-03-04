@@ -1,7 +1,7 @@
 import { dataProvider } from './data-provider';
 import type { MatchedCandidate } from './symptom-matcher';
 
-const EPI_WEIGHT_CAP = 1.15;
+const EPI_WEIGHT_CAP = 1.50; // Increased from 1.15 to allow 50% boost for high prevalence
 
 export async function applyEpidemiologyWeights(
   candidates: MatchedCandidate[],
@@ -13,7 +13,9 @@ export async function applyEpidemiologyWeights(
     const entry = dataProvider.getEpiWeight(c.icd10);
     if (!entry) return c;
 
-    const baseWeight = Math.min(entry.weight, EPI_WEIGHT_CAP);
+    // AADI V4.3 Logic: Combine base weight with aggressive prevalence scaling
+    const prevalenceFactor = 1 + (entry.prevalence_pct / 100) * 1.5; 
+    const baseWeight = Math.min(entry.weight * prevalenceFactor, EPI_WEIGHT_CAP);
     let genderAdjusted = baseWeight;
 
     if (patientGender && entry.cases_per_month >= 20) {

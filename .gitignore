@@ -68,3 +68,41 @@ database/.agents/
 database/.claude/
 database/.qwen/
 .claude/
+.anthropic/
+.openai/
+.cursor/
+.aider*
+aider.conf.yml
+.continue/
+.codeium/
+.github/copilot-*
+.copilot/
+
+# ─── LLM Training / Fine-Tune Data ───────────────────────────────────────────
+training_data/
+fine_tune/
+datasets/raw/
+*.jsonl
+!tests/**/*.jsonl
+
+# ─── Model Weights & Artifacts ───────────────────────────────────────────────
+*.gguf
+*.ggml
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+models/
+checkpoints/
+
+# ─── Vector DB / Embeddings ──────────────────────────────────────────────────
+*.faiss
+*.index
+chroma_db/
+qdrant_db/
+pinecone_cache/
+
+# ─── Generated AI Outputs ────────────────────────────────────────────────────
+ai_outputs/
+generated/
+llm_cache/

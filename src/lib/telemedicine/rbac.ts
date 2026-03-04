@@ -2,13 +2,16 @@
 // PKM Dashboard — Telemedicine RBAC Helper
 // ============================================================
 
-import type { TelemedicineAppointment } from "@prisma/client";
 import type { SessionParticipantRole } from "@/types/telemedicine.types";
+
+interface AppointmentAccessFields {
+  doctorId: string;
+}
 
 interface HasAccessParams {
   userId: string;
   userRole: string;
-  appointment: TelemedicineAppointment;
+  appointment: AppointmentAccessFields;
   participantRole: SessionParticipantRole;
 }
 

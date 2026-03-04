@@ -10,7 +10,8 @@
     "dev:clean": "node -e \"try{require('fs').rmSync('.next/dev/lock')}catch(e){}\" && tsx server.ts",
     "dev:next": "next dev",
     "build": "next build",
-    "start": "NODE_ENV=production tsx server.ts"
+    "start": "NODE_ENV=production tsx server.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
@@ -45,6 +46,6 @@
     "@types/react-dom": "^19",
     "prisma": "^6.16.1",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }

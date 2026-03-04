@@ -9,6 +9,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── ENUMS ───────────────────────────────────────────────────
@@ -176,4 +177,39 @@ model TelemedicineAuditLog {
   @@index([appointmentId])
   @@index([userId])
   @@map("telemedicine_audit_logs")
+}
+
+// ─── DOCTOR STATUS ────────────────────────────────────────────
+
+model DoctorStatus {
+  id          String   @id @default(cuid())
+  doctorName  String   @unique
+  isOnline    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@map("doctor_status")
+}
+
+// ─── TELEMEDICINE REQUEST (dari website pasien) ───────────────
+
+enum TeleRequestStatus {
+  PENDING
+  SEEN
+  HANDLED
+}
+
+model TelemedicineRequest {
+  id        String             @id @default(cuid())
+  nama      String
+  usia      String
+  hp        String
+  poli      String
+  bpjs      String?
+  keluhan   String
+  status    TeleRequestStatus  @default(PENDING)
+  createdAt DateTime           @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("telemedicine_requests")
 }

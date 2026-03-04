@@ -2,10 +2,23 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Video, Plus, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Video, Plus, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Wifi, WifiOff, Inbox, User, Phone } from "lucide-react";
+import { io as socketIO } from "socket.io-client";
 
 import { AppointmentBooking } from "@/components/telemedicine/AppointmentBooking";
 import type { AppointmentWithDetails, AppointmentStatus } from "@/types/telemedicine.types";
+
+interface TeleRequest {
+  id: string;
+  nama: string;
+  usia: string;
+  hp: string;
+  poli: string;
+  bpjs: string | null;
+  keluhan: string;
+  status: "PENDING" | "SEEN" | "HANDLED";
+  createdAt: string;
+}
 
 /* ── Design tokens — sama dengan halaman Profile User ── */
 const L = {
@@ -215,12 +228,123 @@ function AppointmentRow({ appointment, onJoin }: AppointmentCardProps) {
   );
 }
 
+/* ── RequestInbox component ── */
+function RequestInbox({ requests, onMarkHandled }: {
+  requests: TeleRequest[];
+  onMarkHandled: (id: string) => void;
+}) {
+  const pending = requests.filter((r) => r.status === "PENDING");
+  const handled = requests.filter((r) => r.status === "HANDLED");
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <Panel>
+      <PanelSection>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <SectionLabel>Request Website</SectionLabel>
+          {pending.length > 0 && (
+            <span style={{
+              background: "rgba(230,126,34,0.2)", color: L.accent,
+              fontFamily: L.mono, fontSize: 10, padding: "1px 7px", borderRadius: 2,
+            }}>
+              {pending.length} baru
+            </span>
+          )}
+        </div>
+      </PanelSection>
+
+      {requests.length === 0 ? (
+        <PanelSection last>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 0", gap: 8 }}>
+            <Inbox size={24} style={{ color: L.muted, opacity: 0.3 }} />
+            <div style={{ fontFamily: L.mono, fontSize: 11, color: L.muted }}>belum ada request</div>
+          </div>
+        </PanelSection>
+      ) : (
+        <div>
+          {[...pending, ...handled].map((req, i) => (
+            <div key={req.id} style={{
+              padding: "10px 14px",
+              borderBottom: i < requests.length - 1 ? `1px solid ${L.border}` : "none",
+              background: req.status === "PENDING" ? "rgba(230,126,34,0.04)" : "transparent",
+            }}>
+              {/* Header: nama + waktu */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <User size={11} style={{ color: L.muted }} />
+                  <span style={{ fontFamily: L.sans, fontSize: 12, color: req.status === "PENDING" ? L.text : L.muted, fontWeight: req.status === "PENDING" ? 500 : 400 }}>
+                    {req.nama}
+                  </span>
+                  <span style={{ fontFamily: L.mono, fontSize: 10, color: L.muted }}>
+                    {req.usia}th
+                  </span>
+                </div>
+                <span style={{ fontFamily: L.mono, fontSize: 10, color: L.muted }}>
+                  {formatTime(req.createdAt)}
+                </span>
+              </div>
+
+              {/* HP + Poli */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <Phone size={10} style={{ color: L.muted }} />
+                <span style={{ fontFamily: L.mono, fontSize: 10, color: L.muted }}>{req.hp}</span>
+                <span style={{ fontFamily: L.mono, fontSize: 10, color: L.accent, opacity: 0.7 }}>{req.poli}</span>
+              </div>
+
+              {/* BPJS jika ada */}
+              {req.bpjs && (
+                <div style={{ fontFamily: L.mono, fontSize: 10, color: L.muted, marginBottom: 4 }}>
+                  BPJS: {req.bpjs}
+                </div>
+              )}
+
+              {/* Keluhan */}
+              <div style={{ fontSize: 11, color: L.muted, fontStyle: "italic", marginBottom: req.status === "PENDING" ? 8 : 0, lineHeight: 1.4 }}>
+                {req.keluhan.length > 60 ? req.keluhan.slice(0, 60) + "…" : req.keluhan}
+              </div>
+
+              {/* Action */}
+              {req.status === "PENDING" && (
+                <button
+                  onClick={() => onMarkHandled(req.id)}
+                  style={{
+                    padding: "3px 10px",
+                    background: "rgba(230,126,34,0.12)",
+                    border: `1px solid ${L.accent}`,
+                    borderRadius: 2,
+                    color: L.accent,
+                    fontFamily: L.mono, fontSize: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  TANDAI HANDLED
+                </button>
+              )}
+              {req.status === "HANDLED" && (
+                <span style={{ fontFamily: L.mono, fontSize: 10, color: L.muted, opacity: 0.5 }}>✓ handled</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ── Main Page ── */
 export default function TelemedicinePage(): React.JSX.Element {
   const router = useRouter();
   const [appointments, setAppointments] = useState<AppointmentWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBooking, setShowBooking] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+  const [requests, setRequests] = useState<TeleRequest[]>([]);
 
   const loadAppointments = useCallback(async () => {
     setIsLoading(true);
@@ -235,7 +359,86 @@ export default function TelemedicinePage(): React.JSX.Element {
     }
   }, []);
 
-  useEffect(() => { void loadAppointments(); }, [loadAppointments]);
+  const loadRequests = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telemedicine/request");
+      const data = (await res.json()) as { ok: boolean; requests?: TeleRequest[] };
+      setRequests(data.requests ?? []);
+    } catch { /* silent */ }
+  }, []);
+
+  // Cek apakah user adalah dokter + ambil status online
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = (await res.json()) as { displayName?: string };
+        const name = data.displayName ?? "";
+        if (/^dr[g]?\./i.test(name)) {
+          setIsDoctor(true);
+          // Cek status dari doctor-status endpoint
+          const statusRes = await fetch("/api/telemedicine/doctor-status");
+          const statusData = (await statusRes.json()) as { doctors?: { doctorName: string }[] };
+          const online = (statusData.doctors ?? []).some((d) => d.doctorName === name);
+          setIsOnline(online);
+        }
+      } catch { /* silent */ }
+    })();
+  }, []);
+
+  // Socket.IO: listen real-time request baru + notif suara
+  useEffect(() => {
+    const socket = socketIO({ path: "/socket.io", transports: ["websocket"] });
+    socket.on("telemedicine:new-request", (req: TeleRequest) => {
+      setRequests((prev) => [req, ...prev]);
+      // Bell notification via Web Audio API
+      try {
+        const ctx = new AudioContext();
+        const t = ctx.currentTime;
+        // Nada 1
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.connect(g1); g1.connect(ctx.destination);
+        o1.frequency.value = 880;
+        g1.gain.setValueAtTime(0.4, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+        o1.start(t); o1.stop(t + 0.6);
+        // Nada 2
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.frequency.value = 1100;
+        g2.gain.setValueAtTime(0.3, t + 0.15);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        o2.start(t + 0.15); o2.stop(t + 0.8);
+      } catch { /* AudioContext tidak tersedia */ }
+    });
+    return () => { socket.disconnect(); };
+  }, []);
+
+  useEffect(() => { void loadAppointments(); void loadRequests(); }, [loadAppointments, loadRequests]);
+
+  const handleToggleOnline = async () => {
+    setTogglingStatus(true);
+    try {
+      const res = await fetch("/api/telemedicine/doctor-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOnline: !isOnline }),
+      });
+      const data = (await res.json()) as { ok: boolean; isOnline?: boolean };
+      if (data.ok) setIsOnline(data.isOnline ?? false);
+    } catch { /* silent */ } finally {
+      setTogglingStatus(false);
+    }
+  };
+
+  const handleMarkHandled = async (id: string) => {
+    try {
+      await fetch(`/api/telemedicine/request/${id}/handled`, { method: "POST" });
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "HANDLED" as const } : r));
+    } catch { /* silent */ }
+  };
 
   const handleBookingSuccess = useCallback((appointmentId: string) => {
     setShowBooking(false);
@@ -265,7 +468,29 @@ export default function TelemedicinePage(): React.JSX.Element {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Toggle status online — hanya tampil untuk dokter */}
+          {isDoctor && (
+            <button
+              onClick={() => void handleToggleOnline()}
+              disabled={togglingStatus}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px",
+                background: isOnline ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${isOnline ? "#4ADE80" : L.border}`,
+                borderRadius: 2,
+                color: isOnline ? "#4ADE80" : L.muted,
+                fontFamily: L.mono, fontSize: 11,
+                cursor: togglingStatus ? "not-allowed" : "pointer",
+                opacity: togglingStatus ? 0.6 : 1,
+                transition: "all 0.2s",
+              }}
+            >
+              {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {isOnline ? "ONLINE" : "OFFLINE"}
+            </button>
+          )}
           <button
             onClick={() => void loadAppointments()}
             style={{
@@ -386,8 +611,9 @@ export default function TelemedicinePage(): React.JSX.Element {
           )}
         </div>
 
-        {/* ── Kanan: Diagram alur pasien (selalu visible) ── */}
-        <div>
+        {/* ── Kanan: Request inbox + diagram alur ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <RequestInbox requests={requests} onMarkHandled={handleMarkHandled} />
           <PatientFlowDiagram />
         </div>
       </div>

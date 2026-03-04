@@ -72,7 +72,7 @@ export function ConsultationControls({
             activeLabel="Mic On"
             inactiveLabel="Mic Off"
             activeBg="rgba(255,255,255,0.1)"
-            inactiveBg="rgba(239,68,68,0.8)"
+            inactiveBg="rgba(255,255,255,0.06)"
           />
           <ControlButton
             onClick={onToggleCamera}
@@ -82,7 +82,7 @@ export function ConsultationControls({
             activeLabel="Kamera On"
             inactiveLabel="Kamera Off"
             activeBg="rgba(255,255,255,0.1)"
-            inactiveBg="rgba(239,68,68,0.8)"
+            inactiveBg="rgba(255,255,255,0.06)"
           />
           {!isPatient && (
             <ControlButton
@@ -93,7 +93,7 @@ export function ConsultationControls({
               activeLabel="Bagikan Layar"
               inactiveLabel="Stop Share"
               activeBg="rgba(255,255,255,0.1)"
-              inactiveBg="rgba(212,122,87,0.8)"
+              inactiveBg="rgba(255,255,255,0.06)"
             />
           )}
         </div>
@@ -105,17 +105,15 @@ export function ConsultationControls({
               icon={<FileText size={15} />}
               label="Diagnosis"
               onClick={() => setShowDiagnosis(true)}
-              bg="rgba(59,130,246,0.2)"
-              border="rgba(59,130,246,0.5)"
-              hoverBg="rgba(59,130,246,0.35)"
+              bg="rgba(230,126,34,0.15)"
+              border="rgba(230,126,34,0.4)"
             />
             <ClinicalButton
               icon={<Pill size={15} />}
               label="Resep"
               onClick={() => setShowPrescription(true)}
-              bg="rgba(16,185,129,0.2)"
-              border="rgba(16,185,129,0.5)"
-              hoverBg="rgba(16,185,129,0.35)"
+              bg="rgba(230,126,34,0.15)"
+              border="rgba(230,126,34,0.4)"
             />
           </div>
         )}
@@ -216,7 +214,6 @@ interface ClinicalButtonProps {
   onClick: () => void;
   bg: string;
   border: string;
-  hoverBg: string;
 }
 
 function ClinicalButton({ icon, label, onClick, bg, border }: ClinicalButtonProps): React.JSX.Element {
@@ -229,7 +226,7 @@ function ClinicalButton({ icon, label, onClick, bg, border }: ClinicalButtonProp
         gap: 6,
         padding: "7px 14px",
         background: bg,
-        color: "#fff",
+        color: "#E67E22",
         border: `1px solid ${border}`,
         borderRadius: 8,
         fontSize: 12,

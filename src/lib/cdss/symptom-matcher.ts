@@ -1,10 +1,12 @@
-﻿import { dataProvider, type PenyakitEntry } from './data-provider';
+import { dataProvider, type PenyakitEntry } from './data-provider';
+import type { VitalSigns } from './types';
 
 export interface MatcherInput {
   keluhanUtama: string;
   keluhanTambahan?: string;
   usia?: number;
   jenisKelamin?: 'L' | 'P';
+  vitalSigns?: VitalSigns;
 }
 
 export interface MatchedCandidate {
@@ -14,156 +16,257 @@ export interface MatchedCandidate {
   kompetensi: string;
   bodySystem: string;
   matchScore: number;
-  rawMatchScore: number;
+  rawMatchScore: number; 
   matchedSymptoms: string[];
+  negatedSymptoms: string[];
   totalSymptoms: number;
   redFlags: string[];
   terpiData: Array<{ obat: string; dosis: string; frek: string }>;
   kriteria_rujukan: string;
   definisi: string;
   diagnosisBanding: string[];
+  clinicalReasoning?: string;
 }
 
-let cachedIDF: Map<string, number> | null = null;
+interface ClinicalLR {
+  lrPos: number; 
+  lrNeg: number;
+  isMandatory?: boolean; 
+  ageGroup?: 'pediatric' | 'adult' | 'geriatric';
+}
 
-const INDONESIAN_STOPWORDS = new Set([
-  // ... (rest of the set remains same as before)
-  "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan", "adalah",
-  "ini", "itu", "atau", "juga", "tidak", "ada", "akan", "bisa", "sudah",
-  "telah", "sedang", "masih", "belum", "hanya", "saja", "lebih", "sangat",
-  "seperti", "oleh", "karena", "sering", "dapat", "dalam", "secara",
-  "antara", "tanpa", "melalui", "tentang", "setelah", "sebelum", "selama",
-  "hingga", "sampai", "sejak", "mungkin", "biasanya", "kadang", "pernah",
-  "dimulai", "riwayat", "pasien", "penting", "ditanyakan", "datang",
-  "keluhan", "utama", "tambahan", "anamnesis", "pemeriksaan", "fisik",
-  "laboratorium", "klinis", "gejala", "tanda", "disertai", "merasa",
-  "hari", "minggu", "bulan", "tahun", "usia", "jenis", "kelamin",
-  "laki-laki", "perempuan", "dahulu", "keluarga", "sosial", "ekonomi",
-  "perjalanan", "umumnya", "khususnya", "beberapa", "macam", "terdiri",
-  "atas", "lain", "adanya", "terjadi", "dialami", "mengalami", "dirasakan",
-  "tampak", "terlihat", "didapatkan", "ditemukan", "berlangsung", "saat",
-  "sebelumnya", "terkait", "akibat", "berhubungan", "kondisi", "medis",
-  "paling", "seringkali", "biasa", "muncul", "timbul", "menunjukkan",
-  "penyakit", "merupakan", "salah", "satu", "berupa", "maupun",
-  "diagnosis", "terapi", "tatalaksana", "edukasi", "prognosis", "kriteria",
-  "rujukan", "komplikasi", "faktor", "risiko", "definisi", "etiologi",
-  "patofisiologi", "manifestasi", "pemeriksaan", "penunjang", "pengobatan",
-  "diberikan", "dilakukan", "diperlukan", "disarankan", "direkomendasikan",
-  "segera", "waspada", "perlu", "harus", "dapat", "mungkin", "sering",
-  "jarang", "kadang-kadang", "umum", "khusus", "utama", "tambahan",
-  "awal", "akhir", "akut", "kronis", "ringan", "sedang", "berat"
-]);
+const CLINICAL_PHRASES = [
+  "benjolan payudara",
+  "jeruk busuk",
+  "kulit jeruk",
+  "peau d orange",
+  "nyeri goyang porsio",
+  "terlambat haid",
+  "benjolan tidak bisa masuk",
+  "sesak saat berbaring",
+  "orthopnea",
+  "bengkak kedua tungkai",
+  "tidak bisa bab",
+  "tidak bisa kentut",
+  "perut membesar",
+  "obstipasi",
+  "minum minuman keras",
+  "alkohol",
+  "muntah darah",
+  "hematemesis",
+  "nyeri perut kanan bawah",
+  "nyeri berpindah",
+  "nyeri tekan mcburney",
+  "anorexia",
+  "tidak mau makan",
+  "muntah setelah nyeri",
+  "perut papan",
+  "defans muskular",
+  "kaki bengkak sebelah",
+  "kehilangan kesadaran",
+  "penurunan kesadaran",
+  "sesak napas",
+  "nyeri dada tipikal",
+  "anak masih aktif",
+  "masih mau main",
+  "kaku kuduk",
+  "petechiae",
+  "sela jari"
+];
 
-function tokenize(text: string): string[] {
-  // NEW: Normalize text using dataProvider synonyms first
-  const normalized = dataProvider.normalizeText(text);
+/**
+ * ISKANDAR V3.2 - MULTI-LAYER LIKELIHOOD MAP (DOCTOR ISKANDAR'S BRAIN)
+ */
+const DOCTORS_LR_MAP: Record<string, ClinicalLR | ClinicalLR[]> = {
+  // --- ONCOLOGY ---
+  "benjolan payudara": { lrPos: 10.0, lrNeg: 0.1 },
+  "jeruk busuk": { lrPos: 60.0, lrNeg: 0.8 }, // Pathognomonic for late-stage CA Mammae
+  "kulit jeruk": { lrPos: 50.0, lrNeg: 0.8 },
+  "peau d orange": { lrPos: 55.0, lrNeg: 0.8 },
+
+  // --- CANCER SENTINEL (B-SYMPTOMS & PHYSICAL) ---
+  "berat badan turun drastis": { lrPos: 12.0, lrNeg: 0.5 },
+  "benjolan keras": { lrPos: 15.0, lrNeg: 0.2 },
+  "tidak bisa digerakkan": { lrPos: 20.0, lrNeg: 0.1 },
+  "terfiksir": { lrPos: 20.0, lrNeg: 0.1 },
+  "luka tidak sembuh": { lrPos: 10.0, lrNeg: 0.3 },
+  "benjolan makin besar": { lrPos: 5.0, lrNeg: 0.5 },
+  "anemia kronis": { lrPos: 4.0, lrNeg: 0.7 },
+
+  // --- OBGYN EMERGENCY ---
+  "nyeri goyang porsio": { lrPos: 45.0, lrNeg: 0.01, isMandatory: true }, 
+  "terlambat haid": { lrPos: 5.0, lrNeg: 0.1 },
+
+  // --- SURGICAL EMERGENCY ---
+  "benjolan tidak bisa masuk": { lrPos: 40.0, lrNeg: 0.01, isMandatory: true }, 
+  "nyeri tekan mcburney": { lrPos: 15.0, lrNeg: 0.1 },
+  "defans muskular": { lrPos: 25.0, lrNeg: 0.5 },
+  "perut papan": { lrPos: 25.0, lrNeg: 0.5 },
+  "tidak bisa bab": { lrPos: 15.0, lrNeg: 0.1 },
+  "tidak bisa kentut": { lrPos: 40.0, lrNeg: 0.05, isMandatory: true },
+  "perut membesar": { lrPos: 10.0, lrNeg: 0.2 },
+  "muntah setelah nyeri": { lrPos: 3.5, lrNeg: 0.5 },
+
+  // --- GENERAL SYMPTOMS ---
+  "anorexia": { lrPos: 1.3, lrNeg: 0.3 },
+  "tidak mau makan": { lrPos: 1.3, lrNeg: 0.3 },
+
+  // --- INTERNAL MEDICINE ---
+  "sesak saat berbaring": { lrPos: 12.0, lrNeg: 0.3 }, 
+  "orthopnea": { lrPos: 15.0, lrNeg: 0.2 },
+  "bengkak kedua tungkai": { lrPos: 8.0, lrNeg: 0.2 },
+  "minum minuman keras": { lrPos: 35.0, lrNeg: 0.1 },
+  "muntah darah": { lrPos: 25.0, lrNeg: 0.1 },
+
+  // --- RESILIENCE (DR. ISKANDAR'S PHILOSOPHY) ---
+  "anak masih aktif": { lrPos: 0.2, lrNeg: 3.0, ageGroup: 'pediatric' },
+  "masih mau main": { lrPos: 0.15, lrNeg: 4.0, ageGroup: 'pediatric' },
   
-  const words = normalized
-    .replace(/[^a-z0-9\u00C0-\u024F\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(t => t.length > 2 && !INDONESIAN_STOPWORDS.has(t));
+  // --- MANDATORY SYMPTOMS ---
+  "nyeri perut": { lrPos: 2.0, lrNeg: 0.01, isMandatory: true }, 
+  "demam": { lrPos: 1.5, lrNeg: 0.05, isMandatory: false }, 
+  "batuk": { lrPos: 1.5, lrNeg: 0.01, isMandatory: true, ageGroup: 'adult' }, 
+  
+  // --- PATHOGNOMONIC ---
+  "nyeri berpindah": { lrPos: 20.0, lrNeg: 0.2 },
+  "nyeri dada tipikal": { lrPos: 12.0, lrNeg: 0.1 },
+  "kaku kuduk": { lrPos: 30.0, lrNeg: 0.01, isMandatory: true },
+  "bicara pelo": { lrPos: 25.0, lrNeg: 0.1 },
+  "petechiae": { lrPos: 18.0, lrNeg: 0.8 },
+  "sela jari": { lrPos: 15.0, lrNeg: 0.2 },
+};
 
-  const bigrams: string[] = [];
-  for (let i = 0; i < words.length - 1; i++) {
-    bigrams.push(`~~${words[i]}_${words[i + 1]}`);
-  }
-  return [...words, ...bigrams];
+const SEASONAL_BOOST: Record<string, number> = {
+  "A91": 3.0, "A90": 2.5, "A09": 1.5, "A27": 4.0
+};
+
+function isRainySeason(): boolean {
+  const month = new Date().getMonth() + 1;
+  return month >= 11 || month <= 4;
 }
 
-function buildIDF(diseases: PenyakitEntry[]): Map<string, number> {
-  if (cachedIDF) return cachedIDF;
-  const docFreq = new Map<string, number>();
-  const N = diseases.length;
-  for (const p of diseases) {
-    const tokens = new Set(p.gejala_klinis.flatMap(g => tokenize(g)));
-    for (const t of tokens) docFreq.set(t, (docFreq.get(t) ?? 0) + 1);
+function probToOdds(p: number): number { return p / (1 - p); }
+function oddsToProb(o: number): number { return o / (1 + o); }
+
+function extractClinicalEvidence(text: string): { positive: Set<string>, negative: Set<string> } {
+  const normalized = text.toLowerCase();
+  const positive = new Set<string>();
+  const negative = new Set<string>();
+  const NEGATION_WORDS = ["tidak", "bukan", "tanpa", "negatif", "menyangkal", "tdk", "normal", "tdk ada"];
+
+  for (const phrase of CLINICAL_PHRASES) {
+    if (normalized.includes(phrase)) {
+      const idx = normalized.indexOf(phrase);
+      const precedingText = normalized.substring(Math.max(0, idx - 25), idx);
+      const isNegated = NEGATION_WORDS.some(neg => precedingText.includes(neg));
+      if (isNegated) negative.add(phrase);
+      else positive.add(phrase);
+    }
   }
-  cachedIDF = new Map<string, number>();
-  for (const [token, df] of docFreq) {
-    cachedIDF.set(token, Math.log((N + 1) / (df + 1)) + 1);
+  
+  for (const key of Object.keys(DOCTORS_LR_MAP)) {
+    if (!CLINICAL_PHRASES.includes(key) && normalized.includes(key)) {
+      const idx = normalized.indexOf(key);
+      const precedingText = normalized.substring(Math.max(0, idx - 20), idx);
+      if (NEGATION_WORDS.some(neg => precedingText.includes(neg))) negative.add(key);
+      else positive.add(key);
+    }
   }
-  return cachedIDF;
+  return { positive, negative };
 }
 
-function scoreDisease(
-  inputTokens: Set<string>,
+function calculateV32Score(
+  evidence: { positive: Set<string>, negative: Set<string> },
   disease: PenyakitEntry,
-  idf: Map<string, number>,
-): { combined: number; matched: string[] } {
-  const symptomTokens = new Set(disease.gejala_klinis.flatMap(g => tokenize(g)));
-  const definitionTokens = new Set(tokenize(disease.definisi || ''));
-  const diseaseTokens = new Set([...symptomTokens, ...definitionTokens]);
-  
-  if (diseaseTokens.size === 0) return { combined: 0, matched: [] };
+  input: MatcherInput
+): { score: number, matched: string[], negated: string[], reasoning: string } {
+  const epi = dataProvider.getEpiWeight(disease.icd10);
+  let basePrevalence = epi ? epi.prevalence_pct : 0.1;
+  if (isRainySeason() && SEASONAL_BOOST[disease.icd10]) basePrevalence *= SEASONAL_BOOST[disease.icd10];
 
-  const intersection = new Set([...inputTokens].filter(t => diseaseTokens.has(t)));
-  if (intersection.size === 0) return { combined: 0, matched: [] };
+  let currentOdds = probToOdds(Math.min(0.5, basePrevalence / 100));
+  const matched: string[] = [];
+  const negated: string[] = [];
+  let lrChain = "";
+  let mandatoryKilled = false;
 
-  const matched = [...intersection].filter(t => !t.startsWith('~~'));
+  const diseaseSymptoms = disease.gejala_klinis.map(g => g.toLowerCase());
+  const patientAge = input.usia || 30;
+  const ageGroup = patientAge < 12 ? 'pediatric' : patientAge > 60 ? 'geriatric' : 'adult';
 
-  let inputWeight = 0;
-  let matchWeight = 0;
-  for (const t of inputTokens) inputWeight += idf.get(t) ?? 1;
-  for (const t of intersection) matchWeight += idf.get(t) ?? 1;
-  const idfScore = inputWeight > 0 ? matchWeight / inputWeight : 0;
+  for (const symptom of diseaseSymptoms) {
+    const evidenceKey = Array.from(evidence.positive).find(p => symptom.includes(p) || p.includes(symptom)) ||
+                        Array.from(evidence.negative).find(n => symptom.includes(n) || n.includes(symptom));
+    
+    const lrKey = evidenceKey && DOCTORS_LR_MAP[evidenceKey] ? evidenceKey : 
+                  (DOCTORS_LR_MAP[symptom] ? symptom : null);
 
-  const inputCoverage = intersection.size / Math.max(1, inputTokens.size);
-  const diseaseCoverage = intersection.size / Math.max(1, diseaseTokens.size);
-  const coverageScore = inputCoverage + diseaseCoverage > 0
-    ? (2 * inputCoverage * diseaseCoverage) / (inputCoverage + diseaseCoverage)
-    : 0;
+    if (!lrKey) continue;
 
-  const union = new Set([...inputTokens, ...diseaseTokens]);
-  const jaccardScore = intersection.size / union.size;
+    const rawLr = DOCTORS_LR_MAP[lrKey];
+    const lrs = Array.isArray(rawLr) ? rawLr : [rawLr];
+    const lrData = lrs.find(l => !l.ageGroup || l.ageGroup === ageGroup) || lrs[0];
 
-  const combined = idfScore * 0.6 + coverageScore * 0.2 + jaccardScore * 0.2;
-  return { combined: Math.min(1, combined), matched };
+    const isPresent = evidence.positive.has(lrKey) || Array.from(evidence.positive).some(p => lrKey.includes(p));
+    const isAbsent = evidence.negative.has(lrKey) || Array.from(evidence.negative).some(n => lrKey.includes(n));
+
+    if (isPresent) {
+      currentOdds *= lrData.lrPos;
+      matched.push(lrKey);
+      lrChain += `+${lrData.lrPos} `;
+    } else if (isAbsent) {
+      currentOdds *= lrData.lrNeg;
+      negated.push(lrKey);
+      lrChain += `-${lrData.lrNeg} `;
+      if (lrData.isMandatory) mandatoryKilled = true;
+    }
+  }
+
+  if (input.vitalSigns) {
+    const v = input.vitalSigns;
+    if (v.temperature && v.temperature >= 38.5) {
+      const needsFever = diseaseSymptoms.some(s => s.includes('demam') || s.includes('panas'));
+      currentOdds *= needsFever ? 2.5 : 0.4;
+    }
+    if (v.systolic && v.systolic < 90) {
+      const isEmergency = disease.red_flags?.some(rf => rf.toLowerCase().includes('syok') || rf.toLowerCase().includes('rujuk'));
+      currentOdds *= isEmergency ? 5.0 : 0.5;
+    }
+  }
+
+  let finalProb = oddsToProb(currentOdds);
+  if (mandatoryKilled) finalProb = Math.min(finalProb, 0.01);
+
+  return {
+    score: Math.min(0.99, finalProb),
+    matched,
+    negated,
+    reasoning: `Base: ${basePrevalence.toFixed(2)}%, LRs: ${lrChain.trim()}, Killed: ${mandatoryKilled}`
+  };
 }
 
 export async function matchSymptoms(input: MatcherInput, topN = 10): Promise<MatchedCandidate[]> {
   if (!dataProvider.isReady()) await dataProvider.initialize();
-  
   const diseases = dataProvider.getDiseases();
-  const idf = buildIDF(diseases);
-
   const text = `${input.keluhanUtama} ${input.keluhanTambahan ?? ''}`;
-  const inputTokens = new Set(tokenize(text));
-  if (inputTokens.size === 0) return [];
-
+  const evidence = extractClinicalEvidence(text);
   const candidates: MatchedCandidate[] = [];
+
   for (const p of diseases) {
-    const { combined, matched } = scoreDisease(inputTokens, p, idf);
-    if (combined < 0.05) continue;
+    const { score, matched, negated, reasoning } = calculateV32Score(evidence, p, input);
+    if (score < 0.01 && matched.length === 0) continue;
     candidates.push({
-      diseaseId: p.id,
-      nama: p.nama,
-      icd10: p.icd10,
-      kompetensi: p.kompetensi,
-      bodySystem: p.body_system,
-      matchScore: combined,
-      rawMatchScore: combined,
-      matchedSymptoms: matched,
-      totalSymptoms: p.gejala_klinis.length,
-      redFlags: p.red_flags ?? [],
-      terpiData: p.terapi ?? [],
-      kriteria_rujukan: p.kriteria_rujukan ?? '',
-      definisi: p.definisi ?? '',
-      diagnosisBanding: p.diagnosis_banding ?? [],
+      diseaseId: p.id, nama: p.nama, icd10: p.icd10, kompetensi: p.kompetensi, bodySystem: p.body_system,
+      matchScore: score, rawMatchScore: score, matchedSymptoms: matched, negatedSymptoms: negated,
+      totalSymptoms: p.gejala_klinis.length, redFlags: p.red_flags ?? [], terpiData: p.terapi ?? [],
+      kriteria_rujukan: p.kriteria_rujukan ?? '', definisi: p.definisi ?? '',
+      diagnosisBanding: p.diagnosis_banding ?? [], clinicalReasoning: reasoning
     });
   }
-
-  candidates.sort((a, b) => b.matchScore - a.matchScore);
-  return candidates.slice(0, topN);
+  return candidates.sort((a, b) => b.matchScore - a.matchScore).slice(0, topN);
 }
 
 export async function getKBDiseaseCount(): Promise<number> {
   if (!dataProvider.isReady()) await dataProvider.initialize();
   return dataProvider.getDiseases().length;
 }
-
-export function clearMatcherCache(): void {
-  cachedIDF = null;
-}
-
-
-

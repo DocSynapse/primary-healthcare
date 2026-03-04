@@ -103,17 +103,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Kirim notifikasi WhatsApp dengan link join (non-blocking)
   if (patientPhone && patientName && doctorName) {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const joinUrl = `${baseUrl}/join/${patientJoinToken}`;
-    sendWhatsAppNotification({
-      appointmentId: appointment.id,
-      patientName,
-      patientPhone,
-      doctorName,
-      scheduledAt: appointment.scheduledAt,
-      consultationType: appointment.consultationType,
-      joinUrl,
-    }).catch((err) => console.warn("[WhatsApp] Notifikasi gagal:", err));
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!baseUrl) {
+      console.warn("[Telemedicine] NEXT_PUBLIC_BASE_URL tidak di-set — notifikasi WhatsApp dilewati");
+    }
+    if (baseUrl) {
+      const joinUrl = `${baseUrl}/join/${patientJoinToken}`;
+      sendWhatsAppNotification({
+        appointmentId: appointment.id,
+        patientName,
+        patientPhone,
+        doctorName,
+        scheduledAt: appointment.scheduledAt,
+        consultationType: appointment.consultationType,
+        joinUrl,
+      }).catch((err) => console.warn("[WhatsApp] Notifikasi gagal:", err));
+    }
   }
 
   return NextResponse.json<ApiResponse<AppointmentWithDetails>>(

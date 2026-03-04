@@ -12,7 +12,6 @@ const L = {
   text:      "#d4d4d4",
   muted:     "#666666",
   accent:    "#E67E22",
-  green:     "#4ADE80",
   mono:      "var(--font-geist-mono), 'Fira Code', monospace",
   sans:      "var(--font-geist-sans), sans-serif",
 };
@@ -29,8 +28,6 @@ const CONSULTATION_TYPES: Array<{ value: ConsultationType; label: string; icon: 
 
 const DOCTORS: DoctorOption[] = [
   { id: "ferdi", name: "dr. Ferdi Iskandar", spesialisasi: "Dokter Umum" },
-  { id: "cica",  name: "dr. Cica Lusiana",   spesialisasi: "Dokter Umum" },
-  { id: "endah", name: "drg. Endah Retno W", spesialisasi: "Dokter Gigi" },
 ];
 
 function getNext7Days(): string[] {
@@ -124,7 +121,7 @@ export function AppointmentBooking({ onSuccess, onCancel }: AppointmentBookingPr
             <div key={num} style={{ display: "flex", alignItems: "center" }}>
               <span style={{
                 fontFamily: L.mono, fontSize: 10, letterSpacing: "0.08em",
-                color: isDone ? L.green : isActive ? L.accent : L.muted,
+                color: isDone ? L.accent : isActive ? L.accent : L.muted,
               }}>
                 {isDone ? "✓" : `0${num}`} {label.toUpperCase()}
               </span>
@@ -373,17 +370,17 @@ export function AppointmentBooking({ onSuccess, onCancel }: AppointmentBookingPr
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 16px",
-                background: "rgba(74,222,128,0.15)",
-                border: `1px solid ${L.green}`,
+                background: "rgba(230,126,34,0.15)",
+                border: `1px solid ${L.accent}`,
                 borderRadius: 2,
-                color: L.green,
+                color: L.accent,
                 fontFamily: L.mono, fontSize: 11,
                 cursor: isSaving ? "not-allowed" : "pointer",
                 opacity: isSaving ? 0.6 : 1,
               }}
             >
               {isSaving ? (
-                <><div style={{ width: 12, height: 12, border: `2px solid ${L.green}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> MENYIMPAN...</>
+                <><div style={{ width: 12, height: 12, border: `2px solid ${L.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> MENYIMPAN...</>
               ) : "✓ BUAT APPOINTMENT"}
             </button>
           )}
