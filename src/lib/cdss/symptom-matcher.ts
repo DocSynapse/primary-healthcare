@@ -1,11 +1,4 @@
-﻿/**
- * Iskandar Diagnosis Engine V1 — Symptom Matcher
- * IDF-weighted + Coverage + Jaccard + Bigram. Pure function, <100ms.
- * Adapted for Next.js: uses fs.readFileSync instead of fetch.
- */
-
-import fs from 'node:fs';
-import path from 'node:path';
+﻿import { dataProvider, type PenyakitEntry } from './data-provider';
 
 export interface MatcherInput {
   keluhanUtama: string;
@@ -31,31 +24,10 @@ export interface MatchedCandidate {
   diagnosisBanding: string[];
 }
 
-interface PenyakitEntry {
-  id: string;
-  nama: string;
-  icd10: string;
-  kompetensi: string;
-  body_system: string;
-  definisi: string;
-  gejala_klinis: string[];
-  pemeriksaan_fisik: string[];
-  diagnosis_banding: string[];
-  komplikasi: string[];
-  red_flags: string[];
-  terapi: Array<{ obat: string; dosis: string; frek: string }>;
-  kriteria_rujukan: string;
-}
-
-interface PenyakitDatabase {
-  _metadata?: { total_diseases: number };
-  penyakit: PenyakitEntry[];
-}
-
-let cachedDB: PenyakitDatabase | null = null;
 let cachedIDF: Map<string, number> | null = null;
 
 const INDONESIAN_STOPWORDS = new Set([
+  // ... (rest of the set remains same as before)
   "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan", "adalah",
   "ini", "itu", "atau", "juga", "tidak", "ada", "akan", "bisa", "sudah",
   "telah", "sedang", "masih", "belum", "hanya", "saja", "lebih", "sangat",
@@ -73,24 +45,20 @@ const INDONESIAN_STOPWORDS = new Set([
   "sebelumnya", "terkait", "akibat", "berhubungan", "kondisi", "medis",
   "paling", "seringkali", "biasa", "muncul", "timbul", "menunjukkan",
   "penyakit", "merupakan", "salah", "satu", "berupa", "maupun",
+  "diagnosis", "terapi", "tatalaksana", "edukasi", "prognosis", "kriteria",
+  "rujukan", "komplikasi", "faktor", "risiko", "definisi", "etiologi",
+  "patofisiologi", "manifestasi", "pemeriksaan", "penunjang", "pengobatan",
+  "diberikan", "dilakukan", "diperlukan", "disarankan", "direkomendasikan",
+  "segera", "waspada", "perlu", "harus", "dapat", "mungkin", "sering",
+  "jarang", "kadang-kadang", "umum", "khusus", "utama", "tambahan",
+  "awal", "akhir", "akut", "kronis", "ringan", "sedang", "berat"
 ]);
 
-function loadPenyakitDB(): PenyakitDatabase {
-  if (cachedDB) return cachedDB;
-  const filePath = path.join(process.cwd(), 'public', 'data', 'penyakit.json');
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const parsed = JSON.parse(raw) as PenyakitDatabase | PenyakitEntry[];
-  if (Array.isArray(parsed)) {
-    cachedDB = { penyakit: parsed };
-  } else {
-    cachedDB = parsed;
-  }
-  return cachedDB;
-}
-
 function tokenize(text: string): string[] {
-  const words = text
-    .toLowerCase()
+  // NEW: Normalize text using dataProvider synonyms first
+  const normalized = dataProvider.normalizeText(text);
+  
+  const words = normalized
     .replace(/[^a-z0-9\u00C0-\u024F\s-]/g, ' ')
     .split(/\s+/)
     .filter(t => t.length > 2 && !INDONESIAN_STOPWORDS.has(t));
@@ -122,7 +90,10 @@ function scoreDisease(
   disease: PenyakitEntry,
   idf: Map<string, number>,
 ): { combined: number; matched: string[] } {
-  const diseaseTokens = new Set(disease.gejala_klinis.flatMap(g => tokenize(g)));
+  const symptomTokens = new Set(disease.gejala_klinis.flatMap(g => tokenize(g)));
+  const definitionTokens = new Set(tokenize(disease.definisi || ''));
+  const diseaseTokens = new Set([...symptomTokens, ...definitionTokens]);
+  
   if (diseaseTokens.size === 0) return { combined: 0, matched: [] };
 
   const intersection = new Set([...inputTokens].filter(t => diseaseTokens.has(t)));
@@ -145,20 +116,22 @@ function scoreDisease(
   const union = new Set([...inputTokens, ...diseaseTokens]);
   const jaccardScore = intersection.size / union.size;
 
-  const combined = idfScore * 0.5 + coverageScore * 0.3 + jaccardScore * 0.2;
+  const combined = idfScore * 0.6 + coverageScore * 0.2 + jaccardScore * 0.2;
   return { combined: Math.min(1, combined), matched };
 }
 
 export async function matchSymptoms(input: MatcherInput, topN = 10): Promise<MatchedCandidate[]> {
-  const db = loadPenyakitDB();
-  const idf = buildIDF(db.penyakit);
+  if (!dataProvider.isReady()) await dataProvider.initialize();
+  
+  const diseases = dataProvider.getDiseases();
+  const idf = buildIDF(diseases);
 
   const text = `${input.keluhanUtama} ${input.keluhanTambahan ?? ''}`;
   const inputTokens = new Set(tokenize(text));
   if (inputTokens.size === 0) return [];
 
   const candidates: MatchedCandidate[] = [];
-  for (const p of db.penyakit) {
+  for (const p of diseases) {
     const { combined, matched } = scoreDisease(inputTokens, p, idf);
     if (combined < 0.05) continue;
     candidates.push({
@@ -184,12 +157,11 @@ export async function matchSymptoms(input: MatcherInput, topN = 10): Promise<Mat
 }
 
 export async function getKBDiseaseCount(): Promise<number> {
-  const db = loadPenyakitDB();
-  return db.penyakit.length;
+  if (!dataProvider.isReady()) await dataProvider.initialize();
+  return dataProvider.getDiseases().length;
 }
 
 export function clearMatcherCache(): void {
-  cachedDB = null;
   cachedIDF = null;
 }
 

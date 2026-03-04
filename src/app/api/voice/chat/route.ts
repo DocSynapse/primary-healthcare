@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import fs from "node:fs";
-import path from "node:path";
 import { isCrewAuthorizedRequest } from "@/lib/server/crew-access-auth";
+import { dataProvider } from "@/lib/cdss/data-provider";
 
 export const runtime = "nodejs";
 
@@ -10,36 +9,23 @@ export const runtime = "nodejs";
 
 let _systemPrompt: string | null = null;
 
-function buildSystemPrompt(): string {
+async function buildSystemPrompt(): Promise<string> {
   if (_systemPrompt) return _systemPrompt;
 
-  const dbDir = path.join(process.cwd(), "database");
+  if (!dataProvider.isReady()) await dataProvider.initialize();
 
-  // Load 144 penyakit KKI
-  let diseaseContext = "";
-  try {
-    const raw = JSON.parse(fs.readFileSync(path.join(dbDir, "desease.json"), "utf-8")) as {
-      diseases?: Array<{ name?: string; icd10?: string; description?: string; therapy?: string }>;
-    };
-    const diseases = raw.diseases ?? [];
-    diseaseContext = diseases
-      .slice(0, 144)
-      .map((d) => `- ${d.name ?? ""} (ICD: ${d.icd10 ?? "-"}): ${d.description ?? ""}`)
-      .join("\n");
-  } catch { /* ignore */ }
+  // Load 144 penyakit KKI from unified dataProvider
+  const diseases = dataProvider.getDiseases();
+  const diseaseContext = diseases
+    .slice(0, 144)
+    .map((d) => `- ${d.nama} (ICD: ${d.icd10}): ${d.definisi.substring(0, 150)}...`)
+    .join("\n");
 
-  // Load subset ICD-10 yang umum di Puskesmas (ambil 500 pertama untuk context window)
-  let icdContext = "";
-  try {
-    const raw = JSON.parse(fs.readFileSync(path.join(dbDir, "icd10.json"), "utf-8")) as {
-      icd10?: Array<{ kode?: string; nama_en?: string; nama_id?: string }>;
-    };
-    const icd10 = raw.icd10 ?? [];
-    icdContext = icd10
-      .slice(0, 500)
-      .map((d) => `${d.kode}: ${d.nama_id ?? d.nama_en ?? ""}`)
-      .join("\n");
-  } catch { /* ignore */ }
+  // Load common ICD-10 from diseases list (subset for context window)
+  const icdContext = diseases
+    .slice(0, 200)
+    .map((d) => `${d.icd10}: ${d.nama}`)
+    .join("\n");
 
   _systemPrompt = `Kamu adalah ABBY (Advanced Biomedical Bridging Intelligence) — asisten klinis AI untuk dr. Ferdi Iskandar di Puskesmas Balowerti, Kota Kediri, Indonesia.
 
@@ -117,10 +103,11 @@ export async function POST(request: Request) {
   const history = sessions.get(sessionId)!;
 
   try {
+    const systemInstruction = await buildSystemPrompt();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
-      systemInstruction: buildSystemPrompt(),
+      systemInstruction,
     });
 
     const chat = model.startChat({

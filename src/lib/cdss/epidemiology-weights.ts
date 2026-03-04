@@ -1,43 +1,5 @@
-/**
- * Iskandar Diagnosis Engine V1 — Epidemiology Weights
- * Bayesian prior from 45,030 real cases. Adapted for Next.js (fs-based loading).
- */
-
-import fs from 'node:fs';
-import path from 'node:path';
+import { dataProvider } from './data-provider';
 import type { MatchedCandidate } from './symptom-matcher';
-
-interface EpiWeightEntry {
-  weight: number;
-  cases_per_month: number;
-  prevalence_pct: number;
-  total_annual: number;
-  nama: string;
-  male_pct: number;
-  female_pct: number;
-}
-
-interface EpiWeightRegistry {
-  meta: { source: string; period: string; totalCases: number; totalIcd10: number };
-  weights: Record<string, EpiWeightEntry>;
-}
-
-let cachedRegistry: EpiWeightRegistry | null = null;
-
-function loadRegistry(): EpiWeightRegistry {
-  if (cachedRegistry) return cachedRegistry;
-  try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'epidemiology_weights_v2.json');
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    cachedRegistry = JSON.parse(raw) as EpiWeightRegistry;
-  } catch {
-    cachedRegistry = {
-      meta: { source: 'fallback', period: 'N/A', totalCases: 0, totalIcd10: 0 },
-      weights: {},
-    };
-  }
-  return cachedRegistry;
-}
 
 const EPI_WEIGHT_CAP = 1.15;
 
@@ -45,10 +7,10 @@ export async function applyEpidemiologyWeights(
   candidates: MatchedCandidate[],
   patientGender?: 'L' | 'P',
 ): Promise<MatchedCandidate[]> {
-  const registry = loadRegistry();
+  if (!dataProvider.isReady()) await dataProvider.initialize();
 
   const weighted = candidates.map(c => {
-    const entry = registry.weights[c.icd10] ?? registry.weights[c.icd10.split('.')[0]];
+    const entry = dataProvider.getEpiWeight(c.icd10);
     if (!entry) return c;
 
     const baseWeight = Math.min(entry.weight, EPI_WEIGHT_CAP);
@@ -67,19 +29,24 @@ export async function applyEpidemiologyWeights(
 }
 
 export async function getEpidemiologyMeta() {
-  const registry = loadRegistry();
-  return { ...registry.meta };
+  if (!dataProvider.isReady()) await dataProvider.initialize();
+  // We can add meta to dataProvider if needed, but for now we'll just return a simplified meta
+  return { source: 'dataProvider', generated: new Date().toISOString() };
 }
 
 export async function getLocalEpidemiologyContext(topN = 15): Promise<string> {
-  const registry = loadRegistry();
-  const entries = Object.entries(registry.weights)
-    .filter(([, v]) => v.total_annual > 50)
-    .sort((a, b) => b[1].total_annual - a[1].total_annual)
+  if (!dataProvider.isReady()) await dataProvider.initialize();
+  
+  const diseases = dataProvider.getDiseases();
+  const entries = diseases
+    .map(d => ({ code: d.icd10, weight: dataProvider.getEpiWeight(d.icd10) }))
+    .filter(e => e.weight && e.weight.total_annual > 50)
+    .sort((a, b) => (b.weight?.total_annual ?? 0) - (a.weight?.total_annual ?? 0))
     .slice(0, topN);
+
   if (entries.length === 0) return '';
-  const lines = entries.map(([code, v]) =>
-    `- ${code} ${v.nama}: ${v.prevalence_pct.toFixed(1)}% (${v.total_annual} kasus/tahun, M:${v.male_pct}% F:${v.female_pct}%)`
+  const lines = entries.map(e =>
+    `- ${e.code} ${e.weight!.nama}: ${e.weight!.prevalence_pct.toFixed(1)}% (${e.weight!.total_annual} kasus/tahun, M:${e.weight!.male_pct}% F:${e.weight!.female_pct}%)`
   );
   return `EPIDEMIOLOGI LOKAL (Puskesmas Balowerti, Kediri — data 14 bulan):\n${lines.join('\n')}`;
 }

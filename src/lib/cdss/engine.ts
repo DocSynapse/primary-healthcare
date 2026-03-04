@@ -27,6 +27,7 @@ import { applyEpidemiologyWeights, getEpidemiologyMeta, getLocalEpidemiologyCont
 import { classifyTrafficLight } from './traffic-light';
 import { runLLMReasoning } from './llm-reasoner';
 import { runValidationPipeline } from './validation';
+import { dataProvider } from './data-provider';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -213,26 +214,28 @@ export async function runDiagnosisEngine(
     }).catch(console.error);
   }
 
-  // ── Step 2: Red Flags ──────────────────────────────────────────────────────
-  const redFlags = runRedFlagChecksFromContext(anonymizedContext);
+  // ── Step 2, 3, 4: Parallel Processing ──────────────────────────────────────
+  // We can run Red Flags, Symptom Matching, and Epidemiology Context in parallel
+  const [redFlags, candidatesRaw, epiContext] = await Promise.all([
+    runRedFlagChecksFromContext(anonymizedContext),
+    matchSymptoms({
+      keluhanUtama: anonymizedContext.keluhan_utama,
+      keluhanTambahan: anonymizedContext.keluhan_tambahan,
+      usia: anonymizedContext.usia_tahun,
+      jenisKelamin: anonymizedContext.jenis_kelamin,
+    }, 10),
+    getLocalEpidemiologyContext(15)
+  ]);
+
   if (redFlags.length > 0) {
     console.warn(`[IDE-V1] ${redFlags.length} red flag(s) detected`);
     alerts.push(...redFlagsToAlerts(redFlags));
   }
 
-  // ── Step 3: Symptom Matcher ────────────────────────────────────────────────
-  let candidates = await matchSymptoms({
-    keluhanUtama: anonymizedContext.keluhan_utama,
-    keluhanTambahan: anonymizedContext.keluhan_tambahan,
-    usia: anonymizedContext.usia_tahun,
-    jenisKelamin: anonymizedContext.jenis_kelamin,
-  }, 10);
-
   // ── Step 4: Epidemiology Weights ───────────────────────────────────────────
-  candidates = await applyEpidemiologyWeights(candidates, anonymizedContext.jenis_kelamin);
+  const candidates = await applyEpidemiologyWeights(candidatesRaw, anonymizedContext.jenis_kelamin);
 
   // ── Step 5: LLM Reasoner ───────────────────────────────────────────────────
-  const epiContext = await getLocalEpidemiologyContext(15);
   const reasonerResult = await runLLMReasoning({
     candidates,
     keluhanUtama: anonymizedContext.keluhan_utama,
@@ -336,6 +339,7 @@ export async function getCDSSEngineStatus(): Promise<CDSSEngineStatus> {
 export async function initCDSSEngine(): Promise<boolean> {
   try {
     console.log('[IDE-V1] Initializing Iskandar Diagnosis Engine...');
+    await dataProvider.initialize();
     const kbCount = await getKBDiseaseCount();
     await getEpidemiologyMeta();
     console.log(`[IDE-V1] Ready. KB: ${kbCount} diseases. Model: IDE-V1-GEMINI (Gemini 2.0 Flash)`);

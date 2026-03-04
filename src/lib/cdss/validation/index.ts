@@ -1,42 +1,7 @@
-﻿/**
- * Iskandar Diagnosis Engine V1 — 5-Layer Validation Pipeline
- * Adapted for Next.js: no IndexedDB, uses penyakit.json directly.
- */
-
-import fs from 'node:fs';
-import path from 'node:path';
+import { dataProvider, type PenyakitEntry } from '../data-provider';
 import type { AIDiagnosisSuggestion } from '../types';
 import type { RedFlag } from '../red-flags';
 import type { ValidationResult, ValidationContext, ValidatedSuggestion, LayerResult } from './types';
-
-// ── Simple penyakit lookup (replaces IndexedDB) ──────────────────────────────
-
-interface PenyakitEntry {
-  id: string;
-  icd10: string;
-  nama: string;
-  red_flags?: string[];
-  terapi?: Array<{ obat: string; dosis: string; frek: string }>;
-  kriteria_rujukan?: string;
-}
-
-let cachedPenyakit: PenyakitEntry[] | null = null;
-
-function loadPenyakitLookup(): PenyakitEntry[] {
-  if (cachedPenyakit) return cachedPenyakit;
-  try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'penyakit.json');
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const parsed = JSON.parse(raw) as { penyakit?: PenyakitEntry[] } | PenyakitEntry[];
-    cachedPenyakit = Array.isArray(parsed) ? parsed : (parsed as { penyakit?: PenyakitEntry[] }).penyakit ?? [];
-  } catch { cachedPenyakit = []; }
-  return cachedPenyakit;
-}
-
-function getPenyakitByCode(icd10: string): PenyakitEntry | null {
-  const db = loadPenyakitLookup();
-  return db.find(p => p.icd10 === icd10 || p.icd10.startsWith(icd10.split('.')[0])) ?? null;
-}
 
 // ── Layer 1: Syntax ──────────────────────────────────────────────────────────
 
@@ -68,18 +33,19 @@ function validateSyntax(suggestions: unknown[]): { passed: boolean; valid: AIDia
 
 // ── Layer 2: Schema (ICD-10 check) ───────────────────────────────────────────
 
-function validateSchema(suggestions: AIDiagnosisSuggestion[]): {
+async function validateSchema(suggestions: AIDiagnosisSuggestion[]): Promise<{
   passed: boolean;
   verified: Map<string, boolean>;
   unverified: string[];
   entries: Map<string, PenyakitEntry>;
-} {
+}> {
+  if (!dataProvider.isReady()) await dataProvider.initialize();
   const verified = new Map<string, boolean>();
   const unverified: string[] = [];
   const entries = new Map<string, PenyakitEntry>();
 
   for (const s of suggestions) {
-    const entry = getPenyakitByCode(s.icd10_code);
+    const entry = dataProvider.getPenyakitByICD(s.icd10_code);
     if (entry) { verified.set(s.icd10_code, true); entries.set(s.icd10_code, entry); }
     else { verified.set(s.icd10_code, false); unverified.push(s.icd10_code); }
   }
@@ -203,7 +169,7 @@ export async function runValidationPipeline(
   let current = syntaxResult.valid;
 
   // Layer 2
-  const schemaResult = validateSchema(current);
+  const schemaResult = await validateSchema(current);
   layerResults.push({ layer: 2, name: 'ICD-10 Schema', passed: schemaResult.passed, affected_count: schemaResult.unverified.length, details: schemaResult.unverified.map(c => `Unverified: ${c}`) });
   if (schemaResult.unverified.length > 0) warnings.push(`${schemaResult.unverified.length} kode ICD-10 tidak terverifikasi`);
 

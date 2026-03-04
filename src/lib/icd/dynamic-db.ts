@@ -117,7 +117,7 @@ function resolveXmlPath(version: IcdVersionKey): string {
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
   }
-  throw new Error(`File XML ICD-10 versi ${version} tidak ditemukan. Cek path ENV atau Desktop.`);
+  return "";
 }
 
 function resolveIcd10JsonPath(): string {
@@ -237,6 +237,15 @@ function buildVersionCatalogFromJson(version: IcdVersionKey, jsonPath: string): 
   return { version, entries, byCode, byLegacyHead };
 }
 
+function createEmptyVersionCatalog(version: IcdVersionKey): VersionCatalog {
+  return {
+    version,
+    entries: [],
+    byCode: new Map(),
+    byLegacyHead: new Map(),
+  };
+}
+
 function loadDynamicIcdDb(): DynamicIcdDb {
   if (cachedDb) return cachedDb;
 
@@ -251,13 +260,24 @@ function loadDynamicIcdDb(): DynamicIcdDb {
   cachedPaths = resolvedPaths;
   const extensions = loadExtensionCatalog();
   cachedExtensionPath = extensions.sourcePath;
+
+  const v2010 = icd10JsonPath
+    ? buildVersionCatalogFromJson("2010", icd10JsonPath)
+    : resolvedPaths["2010"]
+      ? buildVersionCatalog("2010", resolvedPaths["2010"])
+      : createEmptyVersionCatalog("2010");
+  const v2016 = resolvedPaths["2016"]
+    ? buildVersionCatalog("2016", resolvedPaths["2016"])
+    : createEmptyVersionCatalog("2016");
+  const v2019 = resolvedPaths["2019"]
+    ? buildVersionCatalog("2019", resolvedPaths["2019"])
+    : createEmptyVersionCatalog("2019");
+
   cachedDb = {
     versions: {
-      "2010": icd10JsonPath
-        ? buildVersionCatalogFromJson("2010", icd10JsonPath)
-        : buildVersionCatalog("2010", resolvedPaths["2010"]),
-      "2016": buildVersionCatalog("2016", resolvedPaths["2016"]),
-      "2019": buildVersionCatalog("2019", resolvedPaths["2019"]),
+      "2010": v2010,
+      "2016": v2016,
+      "2019": v2019,
     },
     extensions,
   };
