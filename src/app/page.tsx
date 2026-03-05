@@ -385,23 +385,53 @@ export default function ProfilUserPage() {
           alignItems: "center",
           justifyContent: "space-between",
           borderBottom: heroExpanded ? `1px solid ${L.border}` : "none",
-          padding: "0 24px",
+          padding: "0 20px",
           marginTop: 12,
         }}>
-          <div style={{ display: "flex" }}>
-            {HERO_TABS.map((t, i) => (
-              <div key={t} onClick={() => { setActiveTab(i); if (!heroExpanded) setHeroExpanded(true); }} style={{
-                padding: "9px 16px",
-                fontFamily: L.mono,
-                fontSize: 11,
-                color: i === activeTab ? L.text : L.muted,
-                borderBottom: i === activeTab && heroExpanded ? `1px solid ${L.accent}` : "1px solid transparent",
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-                marginBottom: -1,
-                transition: "color 0.15s",
-              }}>{t}</div>
-            ))}
+          {/* Tab strip — nm raised pill container */}
+          <div style={{
+            display: "flex",
+            gap: 4,
+            padding: "4px",
+            borderRadius: 6,
+            background: L.bg,
+            boxShadow: L.bg === "var(--bg-canvas)"
+              ? "inset 2px 2px 5px rgba(0,0,0,0.35), inset -1px -1px 3px rgba(255,255,255,0.04)"
+              : "inset 1px 1px 3px rgba(45,36,32,0.12), inset -1px -1px 2px rgba(255,255,255,0.6)",
+            marginBottom: 6,
+          }}>
+            {HERO_TABS.map((t, i) => {
+              const isActive = i === activeTab && heroExpanded;
+              const isDark = L.bg === "var(--bg-canvas)";
+              return (
+                <div
+                  key={t}
+                  onClick={() => { setActiveTab(i); if (!heroExpanded) setHeroExpanded(true); }}
+                  style={{
+                    padding: "6px 14px",
+                    fontFamily: L.mono,
+                    fontSize: 11,
+                    color: isActive ? L.text : L.muted,
+                    letterSpacing: "0.04em",
+                    cursor: "pointer",
+                    borderRadius: 4,
+                    transition: "all 0.18s",
+                    userSelect: "none",
+                    background: isActive
+                      ? L.bgPanel
+                      : "transparent",
+                    boxShadow: isActive
+                      ? isDark
+                        ? "2px 2px 5px rgba(0,0,0,0.5), -1px -1px 3px rgba(255,255,255,0.06)"
+                        : "1px 1px 4px rgba(45,36,32,0.15), -1px -1px 2px rgba(255,255,255,0.9)"
+                      : "none",
+                    borderBottom: isActive
+                      ? `1px solid ${L.accent}`
+                      : "1px solid transparent",
+                  }}
+                >{t}</div>
+              );
+            })}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
