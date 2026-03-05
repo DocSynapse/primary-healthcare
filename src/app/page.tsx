@@ -27,7 +27,7 @@ function useL() {
   const isDark = theme === "dark";
   return {
     bg:        isDark ? "var(--bg-canvas)"            : "var(--bg-canvas)",
-    bgPanel:   isDark ? "#303030"                     : "var(--bg-card, #ffffff)",
+    bgPanel:   isDark ? "#303030"                     : "var(--bg-card, #F5EEE4)",
     bgHover:   isDark ? "rgba(255,255,255,0.05)"      : "rgba(201,168,124,0.06)",
     border:    isDark ? "rgba(255,255,255,0.10)"      : "var(--line-base)",
     borderAcc: isDark ? "rgba(230,126,34,0.4)"        : "rgba(201,168,124,0.5)",

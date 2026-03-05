@@ -21,7 +21,7 @@
 [data-theme="light"] {
   --bg-canvas: #EDE4D9;        /* Canvas: shade 200 — warm tan, kontras vs card */
   --bg-nav: #FAF3EB;           /* Nav sidebar: shade 100 — cream */
-  --bg-card: #FFFFFF;          /* Card surface: putih bersih, kontras jelas */
+  --bg-card: #F5EEE4;          /* Card surface: sedikit lebih terang dari canvas #EDE4D9 */
   --text-main: #2D2420;        /* shade 950 — dark brown */
   --text-muted: #8B7D6F;       /* shade 700 — muted warm */
   --line-base: #DEC9A8;        /* shade 300 — border visible */
