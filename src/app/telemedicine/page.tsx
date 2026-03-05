@@ -35,8 +35,8 @@ function useL() {
     muted:     isDark ? "#777777"                     : "var(--text-muted)",
     accent:    isDark ? "#E67E22"                     : "var(--c-asesmen)",
     green:     "#4ADE80",
-    mono:      "var(--font-geist-mono), 'Fira Code', monospace",
-    sans:      "var(--font-geist-sans), sans-serif",
+    mono:      "var(--font-mono)",
+    sans:      "var(--font-sans)",
   };
 }
 

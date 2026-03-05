@@ -33,6 +33,7 @@
   "exclude": [
     "node_modules",
     "telemedicine",
+    "scripts",
     "src/lib/cdss/anonymizer.ts",
     "src/lib/cdss/ddi-checker.ts",
     "src/lib/cdss/engine.ts",

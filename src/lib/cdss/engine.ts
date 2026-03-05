@@ -18,6 +18,9 @@ import type { VitalSigns } from './types';
 import type { RedFlag } from './red-flags';
 import type { ValidatedSuggestion, ValidationResult } from './validation/types';
 import type { TrafficLightLevel } from './traffic-light';
+import type { MatchedCandidate } from './symptom-matcher';
+
+import { randomUUID } from 'node:crypto';
 
 import { anonymize, validateAnonymization } from './anonymizer';
 import { logDiagnosisRequest, logSuggestionDisplayed } from './audit-logger';
@@ -27,6 +30,7 @@ import { applyEpidemiologyWeights, getEpidemiologyMeta, getLocalEpidemiologyCont
 import { classifyTrafficLight } from './traffic-light';
 import { runLLMReasoning } from './llm-reasoner';
 import { runValidationPipeline } from './validation';
+import { calibrateSuggestions } from './confidence-calibration';
 import { dataProvider } from './data-provider';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -75,6 +79,8 @@ export interface CDSSEngineInput {
 
 export interface CDSSEngineConfig {
   enableAI: boolean;
+  aiMode: 'force_ai' | 'force_local' | 'adaptive';
+  aiLatencyBudgetMs: number;
   maxSuggestions: number;
   minConfidence: number;
   enableAudit: boolean;
@@ -82,6 +88,8 @@ export interface CDSSEngineConfig {
 
 export const DEFAULT_ENGINE_CONFIG: CDSSEngineConfig = {
   enableAI: true,
+  aiMode: 'adaptive',
+  aiLatencyBudgetMs: 2500,
   maxSuggestions: 5,
   minConfidence: 0.10,
   enableAudit: true,
@@ -102,7 +110,7 @@ function generateAlertId(): string {
 }
 
 function generateSessionId(input: CDSSEngineInput): string {
-  return input.session_id ?? `session-${Date.now()}`;
+  return input.session_id ?? `session-${randomUUID()}`;
 }
 
 function mapRedFlagSeverity(severity: RedFlag['severity']): CDSSAlert['severity'] {
@@ -163,6 +171,8 @@ function buildConservativeValidationFallback(
     confidence_adjusted: true,
     original_confidence: s.confidence,
     validation_flags: [{ type: 'warning' as const, code: 'VALIDATION_DEGRADED', message: 'Pipeline validasi penuh tidak tersedia, confidence diturunkan konservatif.' }],
+    key_reasons: ['Validasi penuh tidak tersedia, gunakan verifikasi klinis manual.'],
+    missing_information: ['Lengkapi pemeriksaan fisik terarah.', 'Pertimbangkan pemeriksaan penunjang.'],
     red_flags: s.red_flags ?? [],
     recommended_actions: s.recommended_actions ?? [],
   }));
@@ -175,6 +185,85 @@ function buildConservativeValidationFallback(
     warnings: ['Validation pipeline degraded: menggunakan fallback konservatif.'],
     layer_results: [{ layer: 1, name: 'Syntax Validation', passed: true, affected_count: filtered_suggestions.length, details: ['Fallback aktif.'] }],
   };
+}
+
+function buildLocalSuggestionsFromCandidates(candidates: MatchedCandidate[]) {
+  return candidates.slice(0, 5).map((c, i) => ({
+    rank: i + 1,
+    diagnosis_name: c.nama,
+    icd10_code: c.icd10,
+    confidence: c.matchScore,
+    reasoning: c.definisi
+      ? `${c.definisi.substring(0, 200)}${c.definisi.length > 200 ? '...' : ''}`
+      : `Kesesuaian gejala: ${c.matchedSymptoms.slice(0, 3).join(', ') || 'minimal data gejala spesifik'}.`,
+    key_reasons: [
+      `Kecocokan gejala: ${c.matchedSymptoms.slice(0, 2).join(', ') || 'data gejala minimal'}`,
+      `Skor matcher ${(c.matchScore * 100).toFixed(0)}%`,
+      `Prior epidemiologi lokal ${c.icd10}`,
+    ],
+    missing_information: ['Lengkapi pemeriksaan fisik fokus.', 'Lengkapi data penunjang sesuai indikasi.'],
+    red_flags: c.redFlags.slice(0, 3),
+    recommended_actions: [
+      'Lakukan pemeriksaan fisik terarah dan monitoring TTV serial',
+      ...(c.kriteria_rujukan ? [`Pertimbangkan rujukan: ${c.kriteria_rujukan.substring(0, 120)}`] : []),
+      ...(c.diagnosisBanding.length > 0 ? [`Diagnosis banding: ${c.diagnosisBanding.slice(0, 3).join(', ')}`] : []),
+    ].slice(0, 3),
+  }));
+}
+
+const aiLatencyHistoryMs: number[] = [];
+
+function recordAILatency(latencyMs: number): void {
+  if (!Number.isFinite(latencyMs) || latencyMs <= 0) return;
+  aiLatencyHistoryMs.push(latencyMs);
+  if (aiLatencyHistoryMs.length > 80) aiLatencyHistoryMs.splice(0, aiLatencyHistoryMs.length - 80);
+}
+
+function p95(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil(0.95 * sorted.length) - 1));
+  return sorted[index];
+}
+
+function computeCaseComplexity(input: CDSSEngineInput, candidates: MatchedCandidate[], redFlags: RedFlag[]): number {
+  const mainLen = input.keluhan_utama.trim().length;
+  const extraLen = input.keluhan_tambahan?.trim().length ?? 0;
+  const top = candidates[0]?.matchScore ?? 0;
+  const second = candidates[1]?.matchScore ?? 0;
+  const ambiguity = Math.max(0, 1 - (top - second));
+  const vitalsCount = [input.vital_signs?.systolic, input.vital_signs?.heart_rate, input.vital_signs?.spo2, input.vital_signs?.temperature]
+    .filter((v) => typeof v === 'number').length;
+  const symptomDensity = Math.min(1, (mainLen + extraLen) / 220);
+  const redFlagFactor = redFlags.length > 0 ? 0.25 : 0;
+  const sparsityFactor = vitalsCount <= 1 ? 0.2 : 0;
+  return Math.min(1, (symptomDensity * 0.35) + (ambiguity * 0.4) + redFlagFactor + sparsityFactor);
+}
+
+function shouldUseAIReasoner(
+  config: CDSSEngineConfig,
+  input: CDSSEngineInput,
+  candidates: MatchedCandidate[],
+  redFlags: RedFlag[],
+): { useAI: boolean; reason: string; complexity: number; latencyP95: number } {
+  const latencyP95 = p95(aiLatencyHistoryMs);
+  const complexity = computeCaseComplexity(input, candidates, redFlags);
+
+  if (!config.enableAI) return { useAI: false, reason: 'CONFIG_AI_DISABLED', complexity, latencyP95 };
+  if (config.aiMode === 'force_local') return { useAI: false, reason: 'FORCED_LOCAL_MODE', complexity, latencyP95 };
+  if (config.aiMode === 'force_ai') return { useAI: true, reason: 'FORCED_AI_MODE', complexity, latencyP95 };
+
+  const hasEmergency = redFlags.some((rf) => rf.severity === 'emergency');
+  if (hasEmergency) return { useAI: false, reason: 'EMERGENCY_RED_FLAG_PROTOCOL', complexity, latencyP95 };
+
+  const top = candidates[0]?.matchScore ?? 0;
+  const second = candidates[1]?.matchScore ?? 0;
+  const decisiveLocalCase = top >= 0.82 && (top - second) >= 0.22;
+  const overBudget = latencyP95 > config.aiLatencyBudgetMs && complexity < 0.7;
+
+  if (overBudget) return { useAI: false, reason: 'LATENCY_BUDGET_PROTECTION', complexity, latencyP95 };
+  if (decisiveLocalCase && complexity < 0.6) return { useAI: false, reason: 'LOW_COMPLEXITY_DECISIVE_LOCAL', complexity, latencyP95 };
+  return { useAI: true, reason: 'ADAPTIVE_COMPLEX_CASE', complexity, latencyP95 };
 }
 
 // ── Main Engine ───────────────────────────────────────────────────────────────
@@ -224,7 +313,7 @@ export async function runDiagnosisEngine(
       usia: anonymizedContext.usia_tahun,
       jenisKelamin: anonymizedContext.jenis_kelamin,
       vitalSigns: anonymizedContext.vital_signs, // INTEGRATED V2 Vitals
-    }, 10),
+    }, 25),
     getLocalEpidemiologyContext(15)
   ]);
 
@@ -237,18 +326,31 @@ export async function runDiagnosisEngine(
   const candidates = await applyEpidemiologyWeights(candidatesRaw, anonymizedContext.jenis_kelamin);
 
   // ── Step 5: LLM Reasoner ───────────────────────────────────────────────────
-  const reasonerResult = await runLLMReasoning({
-    candidates,
-    keluhanUtama: anonymizedContext.keluhan_utama,
-    keluhanTambahan: anonymizedContext.keluhan_tambahan,
-    usia: anonymizedContext.usia_tahun,
-    jenisKelamin: anonymizedContext.jenis_kelamin,
-    epiContext,
-  });
+  const aiDecision = shouldUseAIReasoner(config, input, candidates, redFlags);
+  const reasonerResult = aiDecision.useAI
+    ? await runLLMReasoning({
+        candidates,
+        keluhanUtama: anonymizedContext.keluhan_utama,
+        keluhanTambahan: anonymizedContext.keluhan_tambahan,
+        usia: anonymizedContext.usia_tahun,
+        jenisKelamin: anonymizedContext.jenis_kelamin,
+        epiContext,
+      })
+    : {
+        suggestions: buildLocalSuggestionsFromCandidates(candidates),
+        source: 'local' as const,
+        modelVersion: `IDE-V1-KB-${aiDecision.reason}`,
+        latencyMs: 0,
+        dataQualityWarnings: [`AI reasoner tidak dipakai: ${aiDecision.reason}.`],
+      };
 
   const matcherSource = reasonerResult.source;
   const modelVersion = reasonerResult.modelVersion;
+  if (reasonerResult.source === 'ai') {
+    recordAILatency(reasonerResult.latencyMs);
+  }
   if (reasonerResult.dataQualityWarnings.length > 0) warnings.push(...reasonerResult.dataQualityWarnings);
+  warnings.push(`Adaptive mode: ${aiDecision.reason} (complexity=${aiDecision.complexity.toFixed(2)}, ai_p95=${aiDecision.latencyP95}ms)`);
 
   // ── Step 6: Traffic Light ──────────────────────────────────────────────────
   const topConfidence = reasonerResult.suggestions.length > 0 ? reasonerResult.suggestions[0].confidence : 0;
@@ -281,7 +383,10 @@ export async function runDiagnosisEngine(
   }
   alerts.push(...validationToAlerts(validationResult));
 
-  const filteredSuggestions = validationResult.filtered_suggestions
+  const { calibrated: calibratedSuggestions, report: calibrationReport } = await calibrateSuggestions(validationResult.filtered_suggestions);
+  warnings.push(`Calibration ${calibrationReport.source}: sample=${calibrationReport.sample_size}, brier=${calibrationReport.brier_score ?? 'n/a'}`);
+
+  const filteredSuggestions = calibratedSuggestions
     .filter(s => s.confidence >= config.minConfidence)
     .slice(0, config.maxSuggestions);
 
@@ -302,6 +407,13 @@ export async function runDiagnosisEngine(
       model_version: modelVersion || 'IDE-V2',
       latency_ms: processingTime,
       validation_status: validationResult.valid ? 'PASS' : validationResult.layer_passed >= 3 ? 'WARN' : 'FAIL',
+      metadata: {
+        unverified_count: validationResult.unverified_codes.length,
+        adaptive_reason: aiDecision.reason,
+        complexity: Number(aiDecision.complexity.toFixed(3)),
+        calibration_source: calibrationReport.source,
+        calibration_brier: calibrationReport.brier_score ?? -1,
+      },
     }).catch(console.error);
   }
 
