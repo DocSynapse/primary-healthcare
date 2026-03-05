@@ -14,11 +14,12 @@ export function useTheme() {
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const saved = localStorage.getItem("sentra-theme") as Theme | null;
     if (saved) setTheme(saved);
+    else setTheme("dark");
   }, []);
 
   useEffect(() => {

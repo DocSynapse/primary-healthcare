@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="id" data-theme="dark" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className={GeistSans.className}>
         <ThemeProvider>
                               <CrewAccessGate>
