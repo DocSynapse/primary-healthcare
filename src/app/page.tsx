@@ -26,13 +26,13 @@ function useL() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   return {
-    bg:        isDark ? "#0f0f0f"                     : "var(--bg-canvas)",
-    bgPanel:   isDark ? "#141414"                     : "var(--bg-card, #ffffff)",
-    bgHover:   isDark ? "rgba(255,255,255,0.03)"      : "rgba(201,168,124,0.06)",
-    border:    isDark ? "rgba(255,255,255,0.08)"      : "var(--line-base)",
+    bg:        isDark ? "var(--bg-canvas)"            : "var(--bg-canvas)",
+    bgPanel:   isDark ? "#2A2A2A"                     : "var(--bg-card, #ffffff)",
+    bgHover:   isDark ? "rgba(255,255,255,0.05)"      : "rgba(201,168,124,0.06)",
+    border:    isDark ? "rgba(255,255,255,0.10)"      : "var(--line-base)",
     borderAcc: isDark ? "rgba(230,126,34,0.4)"        : "rgba(201,168,124,0.5)",
     text:      isDark ? "#d4d4d4"                     : "var(--text-main)",
-    muted:     isDark ? "#666666"                     : "var(--text-muted)",
+    muted:     isDark ? "#777777"                     : "var(--text-muted)",
     accent:    isDark ? "#E67E22"                     : "var(--c-asesmen)",
     green:     "#4ADE80",
     mono:      "var(--font-geist-mono), 'Fira Code', monospace",
@@ -466,7 +466,7 @@ export default function ProfilUserPage() {
                 Buka EMR Klinis ↗
               </a>
             </div>
-            <div style={{ background: "#1e1e1e", padding: "16px 0", overflowX: "auto" }}>
+            <div style={{ background: L.bgPanel, padding: "16px 0", overflowX: "auto" }}>
               <pre style={{ margin: 0, fontFamily: L.mono, fontSize: 12, lineHeight: 1.7, userSelect: "none" }}>
                 {CODE_LINES.map((line) => (
                   <div key={line.num} style={{ display: "flex", paddingLeft: 16 }}>
@@ -549,13 +549,13 @@ export default function ProfilUserPage() {
                   {msg.role === "user" ? (
                     <div style={{
                       maxWidth: "78%",
-                      background: "#ffffff",
-                      border: "1px solid rgba(255,255,255,0.9)",
+                      background: L.bgPanel,
+                      border: `1px solid ${L.borderAcc}`,
                       borderRadius: 4,
                       padding: "8px 12px",
                       fontFamily: L.sans,
                       fontSize: 13,
-                      color: "#111111",
+                      color: L.text,
                       lineHeight: 1.65,
                       whiteSpace: "pre-wrap",
                     }}>
@@ -888,7 +888,7 @@ export default function ProfilUserPage() {
                         border: `1px solid ${checked ? L.green : L.muted}`,
                         background: checked ? L.green : "transparent",
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 11, color: "#0f0f0f",
+                        fontSize: 11, color: L.bg,
                         transition: "all 0.2s",
                       }}>{checked ? "✓" : ""}</span>
                     )}
